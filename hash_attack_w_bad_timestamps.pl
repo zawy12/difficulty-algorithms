@@ -4,18 +4,25 @@ use JSON;
 # Copyright (c) 2018 Zpalmtree (Turtle coin) and Zawy
 # MIT license
 #
-# Perl script to simulate a hash attack and timestamp manipulation on single or dual-node Cryptonote testnet.
-# Change settings in this file and execute with the following after miner and node are running:
-# >perl hash_attack.pl
-# CTRL-C to stop and stop attack simulated attacker. CTRL-C does not stop this script. 
-# "Stopping attack" means preventing your 1-thread dedicated miner from being able to mine all the time. 
-# "Starting attack" means allowing continuous mining. 
-# "pkill hash_attack.pl" to stop this script.
+# Perl script to simulate hash attacks and timestamp manipulation on testnet.
+#
+# Hash Attack instructions.
+# The computer running this script should be the only miner on the network.
+# Change settings in this file and run script after node is running:
+# >perl hash_attack_w_bad_timestamps.pl
+# CTRL-C to start and stop the attack. CTRL-C does not stop this script.
+# "Stopping attack" means allowing 1-thread to mine only a fraction of the time. 
+# "Starting attack" means allowing continuous mining with 4 threads. 
+#  100x attacker can be simulated with the $AS setting.
+# "pkill hash_attack_w_bad_timestamps.pl" to stop this script.
 #
 # Timestamp manipulation instructions (optional). 
 # What you need:
-# You need 1 or more other nodes and only 1 other 1-thread miner on 1 of them to see effect
-# of > 50% timestamp attacker, provided attacker here has 4 threads. 
+# You need 1 or more other nodes & exactly 1 other 1-thread miner on 1 of them to see effect
+# of > 50% timestamp attacker, provided attacker here has 4 threads. The other miner throws off 
+# this script's attack size calculation. Use $AS=100 to get 4x baseline attack = 4/5 threads = 80% of 
+# network as the hash rate timestamp manipulator.  
+# If attacker here is less than 50% of network hash rate, then results are instructive but less harmful.
 # The other node(s) will have the valid chain because their clock is correct. 
 # Get difficulties and timestamps from those nodes for analysis.
 # Bad timestamp testing procedure:
@@ -23,7 +30,7 @@ use JSON;
 # 1) Turn off automatic time updates on this node. 
 # 2) Select 1 of the 4 recommended timestamp adjustments below, save.
 # 3) Run this script in attack mode for > 10 blocks. 
-# 4) "pkill hash_attack.pl" to stop this script.
+# 4) "pkill hash_attack_w_bad_timestamps.pl" to stop this script.
 # 5) Turn on automatic time update to fix this node's system clock.
 # 6) Repeat 1) to 5) above for each of the 4 recommended bad timestamp settings. 
 # 7) Analyze difficulties and timestamps from the other nodes to see the results.
@@ -42,13 +49,13 @@ $dedicated_threads = 1;
 
 # optional timestamp manipulation settings
 $use_timestamp_manipulation = 0; # if 1 then attacker will send sequence of bad timestamps. 
-$bad_timestamp_size = 0.5*$T;  # Strongly recommended settings to try: 0.5*$T, -0.5*$T, 10*$T, and -10*$T;
-# non-ubuntu systems need root privilidges.
-$linux_system = 0; # 0 = not linux, 1 = ubuntu, 2 = other GNU, 3  = BSD 
+$bad_timestamp_size = 0.5*$T;  # Recommended settings to try: 0.5*$T, -0.5*$T, 3*$T, and -3*$T;
+# Non-ubuntu systems need root privilidges to change time.
+$linux_system = 0; # 0 = not linux, 1 = ubuntu, 2 = other GNU, 3 = BSD 
 
 ############ END SETTINGS ############# 
  
-$dedicated_miner_off_time = int((1-$attacker_threads/$dedicated_threads/$AS)*$T);
+$dedicated_miner_off_time = int((1-$dedicated_threads/$attack_threads*($AS+1))*$T);
 print "Dedicated miner on-time is " . $T - $dedicated_miner_off_time . " seconds per block\n";
 
 start_miner($dedicated_threads);
