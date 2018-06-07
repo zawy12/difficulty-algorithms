@@ -4,7 +4,7 @@ use JSON;
 # Copyright (c) 2018 Zpalmtree (Turtle coin) and Zawy
 # MIT license
 #
-# Perl script to simulate hash attacks and timestamp manipulation on testnet.
+# Perl script to simulate hash attacks and timestamp manipulation on testnet for Cryptonote coins.
 #
 # Hash Attack instructions.
 # The computer running this script should be the only miner on the network.
