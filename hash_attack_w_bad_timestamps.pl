@@ -55,7 +55,7 @@ $linux_system = 0; # 0 = not linux, 1 = ubuntu, 2 = other GNU, 3 = BSD
 
 ############ END SETTINGS ############# 
  
-$dedicated_miner_off_time = int((1-$dedicated_threads/$attack_threads*($AS+1))*$T);
+$dedicated_miner_off_time = int((1-$attack_threads/$dedicated_threads/($AS+1))*$T);
 print "Dedicated miner on-time is " . $T - $dedicated_miner_off_time . " seconds per block\n";
 
 start_miner($dedicated_threads);
