@@ -1,0 +1,37 @@
+
+# tic label frequency
+set xrange [ARG1:ARG2]
+set yrange [0:2]
+set y2range [0:10]
+
+set ylabel 'Normalized Difficulty'
+set y2label 'Normalized Hashrate and Solvetimes'
+
+set ylabel font "Arial, 10"
+set y2label font "Arial, 10"
+
+set xtics ARG3
+set xtics rotate
+set ytics 0.2
+set y2tics 1
+
+set tics font "Arial,10"
+# tics between labels
+# set mxtics 2 
+set grid xtics ytics mxtics mytics
+set term gif size 1200, 500
+set output ARG4 . ".gif"
+
+set size 1,1
+
+set title font "Arial, 15"
+set title ARG4 offset 0,-1
+
+# Do large plots
+plot ARG4 . "_test_DAs_plot.txt" using 1:2 with filledcurve y1=1 title "Difficulty", \
+		ARG4 . "_test_DAs_plot.txt" using 1:4 with filledcurve y2=1 axes x1y2 title "HashRate", \
+#		ARG4 . "_test_DAs_plot.txt" using 1:5 lt rgb "red" with filledcurve y2=0 axes x1y2 title "Attack Size", \
+#		ARG4 . "_test_DAs_plot.txt" using 1:6 lt rgb "blue" with filledcurve y2=0 axes x1y2 title "Delays", \
+#		ARG4 . "_test_DAs_plot.txt" using 1:7 lt rgb "blue" lw 2 with lines axes x1y2 title "Avg " . ARG5 .  " ST", \
+#		ARG4 . "_test_DAs_plot.txt" using 1:8 lt rgb "blue" pt 5 with points axes x1y2 title "High ST"
+
