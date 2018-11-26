@@ -2,7 +2,7 @@
 # tic label frequency
 set xrange [ARG1:ARG2]
 set yrange [0:2]
-set y2range [0:20]
+set y2range [0:14]
 
 set ylabel 'Normalized Difficulty'
 set y2label 'Normalized Hashrate and Solvetimes'
@@ -30,8 +30,8 @@ set title ARG4 offset 0,-1
 # Do large plots
 plot "plot_" . ARG4 . ".txt" using 1:2 with filledcurve y1=1 title "Difficulty", \
 		"plot_" . ARG4 . ".txt" using 1:4 with filledcurve y2=1 axes x1y2 title "Actual HashRate", \
-		"plot_" . ARG4 . ".txt" using 1:5 lt rgb "blue" lw 2 with lines axes x1y2 title "Avg " . ARG5 .  " ST", \
-		"plot_" . ARG4 . ".txt" using 1:6 lt rgb "red" lw 2 with lines axes x1y2 title "11 ST's estimate of Hashrate", \
+		"plot_" . ARG4 . ".txt" using 1:5 lt rgb "blue" lw 1 with lines axes x1y2 title "Avg " . ARG5 .  " ST", \
+		"plot_" . ARG4 . ".txt" using 1:6 lt rgb "red" lw 1 with lines axes x1y2 title "11 ST's estimate of Hashrate", \
 #		"plot_" . ARG4 . ".txt" using 1:6 lt rgb "blue" with filledcurve y2=0 axes x1y2 title "Delays", \
 #		"plot_" . ARG4 . ".txt" using 1:8 lt rgb "blue" pt 5 with points axes x1y2 title "High ST"
 
