@@ -19,7 +19,7 @@ set tics font "Arial,10"
 # tics between labels
 # set mxtics 2 
 set grid xtics ytics mxtics mytics
-set term gif size 1200, 500
+set term gif size 1200, 400
 set output "gif_" . ARG4 . ".gif"
 
 set size 1,1

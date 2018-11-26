@@ -38,7 +38,7 @@ float fRand(float fMin, float fMax) {
     return fMin + f * (fMax - fMin);
 }
 
-u TSA_simulate_ST_N_4(u T, u constant_HR) {
+u TSA_simulate_ST(u T, u constant_HR, int64_t M) {
    // simulates a time-to-solve 0 to 100 (% of T) for N=4 under either 
    // linear HR increase with D or constant
 	u x = fRand(0,1000);
@@ -48,15 +48,19 @@ vector<u>TSA_x_constant_HR_N_4{992,985,977,970,962,955,947,940,933,925,918,911,9
 vector<u>TSA_t_constant_HR_N_4{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,232,234,235,236,237,239,240,241,243,244,246,248,249,251,253,255,257,259,261,263,266,269,271,274,278,281,284,289,294,300,305,313,323,338,350};
 vector<u>TSA_x_linear_HR_N_4{996,992,988,984,980,976,971,967,962,958,953,949,944,939,934,929,924,919,914,909,903,898,892,887,881,875,870,864,858,852,846,840,834,828,821,815,809,802,796,789,783,776,770,763,756,749,743,736,729,722,715,708,701,694,687,680,673,666,658,651,644,637,630,622,615,608,600,593,586,579,571,564,557,550,542,535,528,520,513,506,499,492,485,477,470,463,456,449,442,435,428,421,414,408,401,394,387,381,374,367,361,354,348,342,335,329,323,316,310,304,298,292,286,281,275,269,263,258,252,247,241,236,231,226,221,215,210,206,201,196,191,187,182,177,173,169,164,160,156,152,148,144,140,136,133,129,125,122,118,115,112,108,105,102,99,96,93,90,87,85,82,79,77,74,72,69,67,65,63,61,58,56,54,53,51,49,47,45,44,42,40,39,37,36,35,33,32,31,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,8,7,6,5,4,3,2,1,0};
 vector<u>TSA_t_linear_HR_N_4{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,203,204,206,207,209,210,212,214,216,218,219,222,225,229,234,240,247,256};
+vector<u>TSA_x_constant_HR_N_2{994,989,984,979,974,969,963,958,953,947,942,936,930,925,919,913,908,902,896,890,884,878,872,866,860,854,848,842,835,829,823,817,810,804,797,791,785,778,772,765,758,752,745,739,732,725,719,712,705,699,692,685,678,672,665,658,651,644,638,631,624,617,610,603,597,590,583,576,569,563,556,549,542,536,529,522,515,509,502,495,489,482,475,469,462,456,449,443,436,430,423,417,411,404,398,392,386,380,373,367,361,355,349,343,338,332,326,320,314,309,303,298,292,287,281,276,271,265,260,255,250,245,240,235,230,225,221,216,211,207,202,198,193,189,184,180,176,172,168,164,160,156,152,148,145,141,138,134,131,127,124,121,117,114,111,108,105,102,99,96,94,91,88,86,83,80,78,76,73,71,69,67,64,62,60,58,56,55,53,51,49,47,46,44,43,41,40,38,37,35,34,33,32,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0};
+vector<u>TSA_t_constant_HR_N_2{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,206,208,209,210,212,213,215,217,219,221,223,226,229,231,236,240,246,255,269};
+vector<u>TSA_x_linear_HR_N_2{997,994,992,989,986,983,980,977,974,970,967,963,960,956,952,949,945,941,937,932,928,924,919,915,910,905,900,895,890,885,880,875,869,864,858,853,847,841,835,829,823,817,810,804,798,791,784,778,771,764,757,750,743,736,729,721,714,707,699,692,684,676,669,661,653,645,637,629,621,613,605,597,589,581,573,564,556,548,540,531,523,515,506,498,490,481,473,465,457,448,440,432,424,416,407,399,391,383,375,367,359,352,344,336,329,321,313,306,299,291,284,277,270,263,256,249,242,235,229,222,216,210,204,197,191,186,180,174,168,163,158,152,147,142,137,132,128,123,118,114,110,106,101,97,94,90,86,83,79,76,73,69,66,63,60,58,55,52,50,48,45,43,41,39,37,35,33,31,30,28,26,25,23,22,21,20,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0};
+vector<u>TSA_t_linear_HR_N_2{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,180,181,182,183,185,186,187,189,191,193,195,198,200,204,210,222};
+vector<u>TSA_x, TSA_t;
+   if (M == 2 && constant_HR) { TSA_x = TSA_x_constant_HR_N_2; TSA_t = TSA_t_constant_HR_N_2;}
+   else if (M == 2 && !constant_HR) { TSA_x = TSA_x_linear_HR_N_2; TSA_t = TSA_t_linear_HR_N_2;}
+   else if (M == 4 && constant_HR) { TSA_x = TSA_x_constant_HR_N_4; TSA_t = TSA_t_constant_HR_N_4;}
+   else if (M == 4 && !constant_HR) { TSA_x = TSA_x_linear_HR_N_4; TSA_t = TSA_t_linear_HR_N_4;}
+   else { cout << "Only M=2 and M=4 are supported in TSA simulation." << endl; }
 
-   if (constant_HR) { 
-      for (int j=0; j < TSA_x_constant_HR_N_4.size(); j++ ) {  
-        if ( x >= TSA_x_constant_HR_N_4[j] ) { return (TSA_t_constant_HR_N_4[j]*T)/100;  }
-      }
-   } else {
-      for (int j=0; j < TSA_x_linear_HR_N_4.size(); j++ ) {
-        if ( x >= TSA_x_linear_HR_N_4[j] ) { return (TSA_t_linear_HR_N_4[j]*T)/100; }
-      }
+   for (int j=0; j < TSA_x.size(); j++ ) {  
+      if ( x >= TSA_x[j] ) { return (TSA_t[j]*T)/100;  }
    }
 }
 
@@ -75,7 +79,7 @@ uint64_t solvetime_without_exploits (std::vector<uint64_t>timestamps, uint64_t T
 
 difficulty_type TSA(std::vector<uint64_t> timestamps, 
       std::vector<uint64_t> cumulative_difficulties, uint64_t T, uint64_t N, uint64_t height,  
-            uint64_t FORK_HEIGHT, uint64_t  difficulty_guess, uint64_t networkTime ) {
+            uint64_t FORK_HEIGHT, uint64_t  difficulty_guess, uint64_t networkTime, int64_t M ) {
    uint64_t  L(0), next_D, i, this_timestamp(0), previous_timestamp(0), avg_D;
 
    assert(timestamps.size() == cumulative_difficulties.size() && timestamps.size() <= N+1 );
@@ -97,11 +101,10 @@ difficulty_type TSA(std::vector<uint64_t> timestamps,
    if (avg_D > 2000000*N*N*T) { next_D = (avg_D/(200*L))*(N*(N+1)*T*99);  }   
    else {    next_D = (avg_D*N*(N+1)*T*99)/(200*L);    }	
 
-  
 // LWMA is finished, now use its next_D and previous_timestamp 
 // to get TSA's next_D.  I had to shift from unsigned to singed integers.
-
-   int64_t TSA_D = next_D, M = 4, Ta = T, TM = Ta*M, s = 1E6;
+  
+   int64_t TSA_D = next_D, Ta = T, TM = Ta*M, s = 1E6;
    int64_t exk = s; 
    int64_t ST =  static_cast<int64_t>(networkTime) - static_cast<int64_t>(previous_timestamp);
    ST = std::max(1+Ta/100,std::min(ST,10*Ta));
@@ -110,17 +113,13 @@ difficulty_type TSA(std::vector<uint64_t> timestamps,
    exk = (exk*(s+(f*(s+(f*(s+(f*(s+(f*s)/(4*TM)))/(3*TM)))/(2*TM)))/(TM)))/s;
    TSA_D = std::max(10*M/M, (TSA_D*(s*ST))/(s*Ta+(ST-Ta)*exk)); // M/M performs a cast.
 
-   if ( N==2) { next_D = (next_D*92)/100; }
-   else if ( N==3) { next_D = (next_D*98)/100; }
-   else if ( N==4) { next_D = (next_D*99)/100; }
-
    // Make all insignificant digits zero for easy reading.
    i = 1000000000;
    while (i > 1) { 
       if ( TSA_D > i*100 ) { TSA_D = ((TSA_D+i/2)/i)*i; break; }
       else { i /= 10; }
    }
-
+   if (M==2) { TSA_D = (TSA_D*96)/100; }
    return static_cast<uint64_t>(TSA_D);  	
 }
 
@@ -400,7 +399,7 @@ difficulty_type LWMA4_(std::vector<uint64_t> timestamps,
    return  next_D;
 }
 
-int run_simulation(string DA, u T, u N,u difficulty_guess,u baseline_HR,u attack_start,u attack_stop,u attack_size) {
+int run_simulation(string DA, u T, u N,u difficulty_guess,u baseline_HR,u attack_start,u attack_stop,u attack_size, int64_t M) {
 
 if ( DA == "DIGISHIELD_" ) { N=N+6; } // For simulated MTP = 11 delay.
 
@@ -476,15 +475,15 @@ for (i=0; i <= BLOCKS-1; i++) {
       USE_CN_DELAY = 0;
       next_D = LWMA1_(TS,CD,T,N, height, FORK_HEIGHT, difficulty_guess);
 			TSA_Din = next_D;
-			// The 0 or 1 below selects linear or constant per-block motivation
-      simulated_ST = (TSA_simulate_ST_N_4(T,1)*DX*TSA_Din)/(100*HR); // 100 is b/c it's returned as percent
+			// The 0 or 1 below selects linear or constant per-block motivation. 0=linear 1=constant
+      simulated_ST = (TSA_simulate_ST(T,0,M)*DX*TSA_Din)/(100*HR); // 100 is b/c it's returned as percent
    
 			if (USE_CN_DELAY) {  current_ST = previous_ST; previous_ST = simulated_ST; }
       else { current_ST = simulated_ST; }
 			// simulated_ST = static_cast<u>(log( 1/fRand(0,1))*static_cast<float>((CD.back()-CD[CD.size()-2])*DX)/HR);
    
 			uint64_t nTime = current_ST + TS.back();
-			next_D =  TSA(TS,CD,T,N, height, FORK_HEIGHT, difficulty_guess, nTime);  
+			next_D =  TSA(TS,CD,T,N, height, FORK_HEIGHT, difficulty_guess, nTime, M);  
 		}
 
 		// CD gets 1 block ahead of TS
@@ -568,7 +567,7 @@ srand(time(0)); // seed for fRand();
 // These global constants are not typically changed for a given set of simulations.
 // That's why they are global. 
 
-BLOCKS = 1000; // number of BLOCKS to simulate
+BLOCKS = 5000; // number of BLOCKS to simulate
 BASELINE_D = 40001; // The average D just before the fork. 
 if (BASELINE_D < 10) { 
 		cout << "BASELINE_D needs to be > 10 because of they way HR is used" << endl; return 0;
@@ -591,7 +590,7 @@ DX = 1;  // DX=1 for CN coins.
 // But often you will want to change them between the simulations below.
 
 u attack_start = 120; // 90 = 90% of baseline D.  
-u attack_stop = 180; // 120 = 120% of baseline D.
+u attack_stop = 160; // 120 = 120% of baseline D.
 //  NOTE: use attack size = 100 to turn off hash attacks.
 u attack_size = 300; // HR multiple of baseline HR. Set to 100 for no attacks
 u difficulty_guess = BASELINE_D; 
@@ -618,53 +617,47 @@ USE_CN_DELAY = 0;
 
 DA = "TSA";  // This is only set up to use LWMA1 with N=4
 // TSA has setting inside the loop to choose the per block constant_HR or linear motivation HR.
-// This does not affect the hash attack settings which are based on Din (the internal LWMA1)
+// This is not related to hash attacks which are based on seeing Din.
 N = 60; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
+int64_t M = 2;  // only 2 and 4 supposrted. This is needed only for TSA.
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size,M); 
 
 DA = "LWMA1_";
 N = 60; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
 
-return 0;
-USE_CN_DELAY = 1;
+DA = "LWMA4_"; 
+N = 60; IDENTIFIER++;
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
+
 
 DA = "EMA_";
-N = 2; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
+N = 40; IDENTIFIER++;
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
+
+DA = "DIGISHIELD_";
+N = 17; IDENTIFIER++;
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
+
+DA = "DIGISHIELD_impoved_"; // problems removed
+N = 17; IDENTIFIER++;
+run_simulation(DA, T, N,  difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
 // The identifier is to give the DA a different suffix in case you use the same DA
 // with different settings or conditions. 
 
-DA = "DIGISHIELD_";
-N = 17; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
-
-DA = "LWMA4_"; 
-N = 60; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
-
 // return 0;
  
-
-
-DA = "LWMA1_";
-N = 60; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
-
 DA = "SMA_"; 
 N = 45; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
-DA = "DIGISHIELD_impoved_"; // problems removed
-N = 17; IDENTIFIER++;
-run_simulation(DA, T, N,  difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
 
 DA = "DGW_"; // It's just a SMA_ with 1/3 and 3x limits on ST
 N=24; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size); 
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
 html_file.close();
 } ;
