@@ -95,7 +95,7 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 					If avg last 3 STs = T/2, target increases to prevTarget at 2*T.
 					Rarely, last 3 STs can be 1/2 speed => target = prevTarget at T/2, & 1/2 at T.*/
 
-					bnTarget = ((ct[0]-ct[W])/W/K)*(K*(nTime-TS[0])*(ts[0]-ts[W]))/W/T/T); 
+					bnTarget = ((ct[0]-ct[W])/W/K)*(K*(nTime-TS[0])*(ts[0]-ts[W]))/W/T/T; 
 					j=0; // It needed adjusting, we adjusted it, we're finished, so break out of j loop.
 				}
 			}
