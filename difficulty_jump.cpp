@@ -61,11 +61,11 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 
 	arith_uint256 K = 1e6, i, j, ii=0; // K is a scaling factor for integer divisions
 
-	if ( ts[-1]-ts[-W] < T*numerator/denominator ) { 
+	if ( ts[1]-ts[W] < T*numerator/denominator ) { 
 		bnTarget = ((ct[0]-ct[1])/K)*max(K,(K*(nTime-ts[0])*(ts[0]-ts[W])*denominator/numerator)/T/T);  
 	}
 
-	/*  Check past 24 blocks for any sum of 3 STs < T/2 triggers. This is messy
+	/*  Check past blocks for any sum of W STs < T*numerator/denominator triggers. This is messy
 	because the blockchain does not allow us to store a variable to know
 	if we are currently in a triggered state that is making a sequence of 
 	adjustments to prevTargets, so we have to look for them.
@@ -74,15 +74,15 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 	any time since most recent trigger and we are at current block, aggressively
 	adust prevTarget. */
 
-	for ( int j=past-1; j<= 1; j--) {
-		if ( ts[j]-ts[j-W] < T*numerator/denominator ) {
-			for ( int i = j; i <= 0; i-- ) {
+	for ( int j=past-1; j>= 1; j--) {
+		if ( ts[j]-ts[j+W] < T*numerator/denominator ) {
+			for ( int i = j; i >= 0; i-- ) {
 				ii++;
 				// Check if emission caught up. If yes, "trigger stopped at i". 
 				// Break loop to try more recent j's to see if trigger activates again.
-				if ( ts[i+1]-ts[j-W] > (ii+W)*T ) { break; } 
+				if ( ts[i-1]-ts[j+W] > (ii+W)*T ) { break; } 
 			
-				/* We're here, so there was a TS[j]-TS[j-3] < T/2 trigger in the past 
+				/* We're here, so there was a TS[j]-TS[j+W] < T*numer/denom trigger in the past 
 				and emission rate has not yet slowed up to be back on track so the 
 				"trigger is still active", aggressively adjusting target here at block "i" . */
 
