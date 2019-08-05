@@ -59,7 +59,8 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 	if (ts.size() < 2*W || ct.size() < 2*W ) { exit; } // error. a vector was too small 
 	if (ts.size() < past+W || ct.size() < past+W ) { past = min(ct.size(), ts.size()) - W; } // past was too small, adjust
 
-	arith_uint256 K = 1e6, i, j, ii=0; // K is a scaling factor for integer divisions
+	arith_uint256 K = 1e6; // K is a scaling factor for integer divisions
+	int ii=0;
 
 	if ( ts[1]-ts[W] < T*numerator/denominator ) { 
 		bnTarget = ((ct[0]-ct[1])/K)*max(K,(K*(nTime-ts[0])*(ts[0]-ts[W])*denominator/numerator)/T/T);  
@@ -76,11 +77,12 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 
 	for ( int j=past-1; j>= 1; j--) {
 		if ( ts[j]-ts[j+W] < T*numerator/denominator ) {
-			for ( int i = j; i >= 0; i-- ) {
+			ii=0;
+			for ( int i = j-1; i >= 0; i-- ) {
 				ii++;
 				// Check if emission caught up. If yes, "trigger stopped at i". 
 				// Break loop to try more recent j's to see if trigger activates again.
-				if ( ts[i-1]-ts[j+W] > (ii+W)*T ) { break; } 
+				if ( ts[i]-ts[j+W] > (ii+W)*T ) { break; } 
 			
 				/* We're here, so there was a TS[j]-TS[j+W] < T*numer/denom trigger in the past 
 				and emission rate has not yet slowed up to be back on track so the 
