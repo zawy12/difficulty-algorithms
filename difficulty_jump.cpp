@@ -54,7 +54,7 @@ W = 3; top = 1; denominator = 2;
 bnTarget = RT_CST_RST (bnTarget, ts, cw, numerator, denominator, W, T, past);
 
 arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts, std::vector<arith_uint256> ct, 
-							arith_uint256 numerator, arith_uint256 denominator, arith_uint256 W, arith_uint256 T, arith_uint256 past  ) {
+	arith_uint256 numerator, arith_uint256 denominator, arith_uint256 W, arith_uint256 T, arith_uint256 past  ) {
 
 	if (ts.size() < 2*W || ct.size() < 2*W ) { exit; } // error. a vector was too small 
 	if (ts.size() < past+W || ct.size() < past+W ) { past = min(ct.size(), ts.size()) - W; } // past was too small, adjust
