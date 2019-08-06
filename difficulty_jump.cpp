@@ -1,5 +1,9 @@
 
 /*   
+update:  the bnTarget returned is the target the miner has to solve.
+The actual target that goes on chain and used for ct (cumulative targets)
+i2 nbTarget/2. Miner and validators nbTarget which is 2x the value on the chain.
+
 Preliminary code for super-fast increases in difficulty.   
 Requires the ability to change the difficulty during the current block,
 based on the timestamp the miner selects. See my github issue #36 and KMD.
@@ -34,7 +38,7 @@ past = how far back in past to look for beginning of a trigger
 
 */
 
-// create ts and cw vectors
+// create ts and ct vectors
 // Get bnTarget = Digishield();
 
 arith_uint256 past = 50;
@@ -43,15 +47,15 @@ arith_uint256 W = 12;
 arith_uint256 numerator = 12;
 arith_uint256 denominator = 7;
 
-// bnTarget = RT_CST_RST (bnTarget, ts, cw, numerator, denominator, W, T, past);
+// bnTarget = RT_CST_RST (bnTarget, ts, ct, numerator, denominator, W, T, past);
 
 W = 6; top = 7; denominator = 3;
 
-// bnTarget = RT_CST_RST (bnTarget, ts, cw, numerator, denominator, W, T, past);
+// bnTarget = RT_CST_RST (bnTarget, ts, ct, numerator, denominator, W, T, past);
 
 W = 3; top = 1; denominator = 2;
 
-bnTarget = RT_CST_RST (bnTarget, ts, cw, numerator, denominator, W, T, past);
+bnTarget = RT_CST_RST (bnTarget, ts, ct, numerator, denominator, W, T, past);
 
 arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts, std::vector<arith_uint256> ct, 
 	arith_uint256 numerator, arith_uint256 denominator, arith_uint256 W, arith_uint256 T, arith_uint256 past  ) {
@@ -62,7 +66,7 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 	arith_uint256 K = 1e6; // K is a scaling factor for integer divisions
 	int ii=0;
 
-	if ( ts[1]-ts[W] < T*numerator/denominator ) { 
+	if ( ts[0]-ts[W] < T*numerator/denominator ) { 
 		bnTarget = ((ct[0]-ct[1])/K)*min(K,(K*(nTime-ts[0])*(ts[0]-ts[W])*denominator/numerator)/T/T);  
 	}
 
