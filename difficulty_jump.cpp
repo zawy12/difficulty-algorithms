@@ -1,8 +1,14 @@
 
 /*   
-update:  the bnTarget returned is the target the miner has to solve.
-The actual target that goes on chain and used for ct (cumulative targets)
-i2 nbTarget/2. Miner and validators nbTarget which is 2x the value on the chain.
+
+There are very likely errors in this that will be very difficult to find 
+without fully understanding it which is difficult.
+
+Update:  the bnTarget returned is the target the miner has to solve. But
+the target this uses in the future is not that value, but
+ct[] = bnTarget * bntime (solvetime)^2 * 1000 / 784.  And that value is 
+not used by the baseline-DA, but the baseline DA uses ct[]/2.72 which should be 
+the one used for chain work. 
 
 Preliminary code for super-fast increases in difficulty.   
 Requires the ability to change the difficulty during the current block,
