@@ -4,11 +4,10 @@
 There are very likely errors in this that will be very difficult to find 
 without fully understanding it which is difficult.
 
-Update:  the bnTarget returned is the target the miner has to solve. But
+Update:  the bnTarget returned is the target the miner has to solve and 
+the one that goes on chain for the baseline-DA. But
 the target this uses in the future is not that value, but
-ct[] = bnTarget * bntime (solvetime)^2 * 1000 / 784.  And that value is 
-not used by the baseline-DA, but the baseline DA uses ct[]/2.72 which should be 
-the one used for chain work. 
+ct[i] = bnTarget * bntime (solvetime)^2 * 1000 / 784.  
 
 Preliminary code for super-fast increases in difficulty.   
 Requires the ability to change the difficulty during the current block,
