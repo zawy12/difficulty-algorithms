@@ -71,7 +71,7 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 	arith_uint256 K = 1e6; // K is a scaling factor for integer divisions
 	int ii=0;
 
-	if ( ts[0]-ts[W] < T*numerator/denominator ) { 
+	if ( ts[0]-ts[W+1] < T*numerator/denominator ) { 
 		bnTarget = ((ct[0]-ct[1])/K)*min(K,(K*(nTime-ts[0])*(ts[0]-ts[W])*denominator/numerator)/T/T);  
 	}
 
@@ -85,7 +85,7 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 	adust prevTarget. */
 
 	for ( int j=past-1; j>= 1; j--) {
-		if ( ts[j]-ts[j+W] < T*numerator/denominator ) {
+		if ( ts[j]-ts[j+W+1] < T*numerator/denominator ) {
 			ii=0;
 			for ( int i = j-1; i >= 0; i-- ) {
 				ii++;
