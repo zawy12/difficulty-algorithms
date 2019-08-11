@@ -72,7 +72,7 @@ arith_uint256 RT_CST_RST ( arith_uint256 bnTarget, std::vector<arith_uint256> ts
 	int ii=0;
 
 	if ( ts[0]-ts[W+1] < T*numerator/denominator ) { 
-		bnTarget = ((ct[0]-ct[1])/K)*min(K,(K*(nTime-ts[0])*(ts[0]-ts[W])*denominator/numerator)/T/T);  
+		bnTarget = ((ct[0]-ct[W])/K)*min(K,(K*(nTime-ts[0])*(ts[0]-ts[W])*denominator/numerator)/T/T);  
 	}
 
 	/*  Check past blocks for any sum of W STs < T*numerator/denominator triggers. This is messy
