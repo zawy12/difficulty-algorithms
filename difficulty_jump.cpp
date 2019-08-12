@@ -7,7 +7,7 @@ without fully understanding it which is difficult.
 Update:  the bnTarget returned is the target the miner has to solve and 
 the one that goes on chain for the baseline-DA. But
 the target this uses in the future is not that value, but
-ct[i] = bnTarget * bntime (solvetime)^2 * 1000 / 784.  
+ct[i] = bnTarget * bntime (solvetime)^2 * 1000 / 784 / T / T.  
 
 Preliminary code for super-fast increases in difficulty.   
 Requires the ability to change the difficulty during the current block,
