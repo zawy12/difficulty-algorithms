@@ -1,9 +1,11 @@
-#include <iostream>     // for cout & endl
-#include <math.h>		// for exp, pow, abs
-
 // Exponential Function for Integers
 // Copyright (c) Zawy 2019
 // MIT License
+
+#include <iostream>     // for cout & endl
+#include <math.h>	// for exp, pow, abs.
+
+// The above includes are only needed for the testing the function. The function does not need them.
 
 uint64_t exponential_function_for_integers (uint64_t x_times_10k) {
 
@@ -19,7 +21,7 @@ uint64_t exponential_function_for_integers (uint64_t x_times_10k) {
 	// for (u i = 1; i <= x_times_10k/k; i++ ) { exx = (exx*27183)/k; } // loop method can replace the above if k is changed
 	 
 	exx = exp_of_integers[x_times_10k/k];
-	R = x_times_10k % k; // remainder 
+	R = x_times_10k % k; 
 	exx = (exx*(k+(R*(k+(R*(k+(R*(k+(R*(k+(R*(k+(R*k)/6/k))/5/k))/4/k))/3/k))/2/k))/k))/(k-1); // (k-1) fudge helped center error.
 	if ( x_times_10k/k > 24 ) { exx = exp_of_integers[24]; }	
 	return exx;
