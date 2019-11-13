@@ -48,55 +48,6 @@ d BCH(d targets[], u S[], u N, u T, u L, u h) {
 }
 d SMA(d targets[], u S[], u N, u T, u L, u h) {
 	d sumTargets=0;
-	u timespan = min(L*N*T, max(N*T/L, S[h-1] - S[h-1-N]));// Timespan Limit Attack Demonstration
-// Copyright (c) Zawy 2019
-// MIT License
-
-// Shows how a >50% selfish mining attack can get unlimited number of blocks in about 3x the 
-// difficulty window by retarding the MTP and using timespan limits against themselves.
-// It currently only tests symmetrical limits like BTC's 4x and 1/4 and DASH's 3x, and 1/3.
-// A future update may include fixed-window algos like BTC and LTC which are easier to attack, 
-// and asymmetrical fractional limits like Digishields that also make it a lot easier.
-
-#include <iostream>     // for cout & endl
-#include <math.h>		
-#include <string>
-#include <cstdint>
-#include <bits/stdc++.h> // for array sort
-using namespace std;
-typedef int64_t u;
-typedef double d;
-
-float fRand(float fMin, float fMax) {  	
-	float f = (float)rand() / RAND_MAX;   return fMin + f * (fMax - fMin); 
-}
-	
-u median(u a[], u n) { sort(a, a+n);   return a[n/2];  } 
-
-d BCH(d targets[], u S[], u N, u T, u L, u h) {
-	d sumTargets=0;
-	// BCH reduces out of sequence timstamps like this:
-	u front_array[3] = {S[h-1],   S[h-2],   S[h-3]};
-	u back_array[3]  = {S[h-1-N], S[h-2-N], S[h-3-N]};
-	u front = median( front_array, 3 );
-	u back = median( back_array, 3 );
-	// Here's the limit that allows the exploit.
-	u timespan = min(L*N*T, max(N*T/L, front - back));
-	
-	// Identify the corresponding targets
-	u j;
-	if	(front == S[h-1])	{ j = h-1; }
-	else if (front == S[h-2])	{ j = h-2; }
-	else				{ j = h-3; }
-	u k;
-	if	(back == S[h-1-N])	{ k = h-1-N; }
-	else if (back == S[h-2-N])	{ k = h-2-N; }
-	else				{ k = h-3-N; }
-	for (u i = j; i > k; i-- ) { sumTargets += targets[i]; }
-	return sumTargets*timespan/T/(j-k)/(j-k); 
-}
-d SMA(d targets[], u S[], u N, u T, u L, u h) {
-	d sumTargets=0;
 	u timespan = min(L*N*T, max(N*T/L, S[h-1] - S[h-1-N]));
 	for (u i = h-1; i>=h-N; i-- ) { sumTargets += targets[i]; }
 	return sumTargets*timespan/T/N/N; 
