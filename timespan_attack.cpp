@@ -3,10 +3,10 @@
 // MIT License
 /*
 This demonstrates how a >50% selfish mining attack can get unlimited number of blocks in about 3x the 
-difficulty window by retarding the MTP and using timespan limits against themselves. Works on 
-any algos that use a timespan limit without requiring the timestamps be sequential.
-It currently only tests symmetrical limits like DASH's 3x and 1/3. A future update may include the 
-easier cases of fixed-window algos BTC and LTC which are easier to attack, and asymmetrical fractional limits.
+difficulty window by retarding the MTP and using timespan limits against themselves. The attack can work on 
+any algo that use a timespan limit without requiring the timestamps to be sequential. It currently only
+tests symmetrical limits on simple moving averages like BCH and DASH. A future update may include the 
+easier cases of fixed-window algos like BTC and LTC and asymmetrical fractional limits.
 See https://github.com/zawy12/difficulty-algorithms/issues/30
 */
 
