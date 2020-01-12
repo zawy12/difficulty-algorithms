@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2018, 2019 by Zawy, MIT license.
+Copyright (c) 2018 by Zawy, MIT license.
 Tests various difficulty algorithms for Cryptonote-type coins. It's complicated 
 because it's very flexible. See main() to select algorithm(s) and settings.  
 It can simulate on-off mining. It outputs timestamps and difficulties to screen, 
@@ -561,6 +561,11 @@ u ETH_(std::vector<u> timestamps,	 std::vector<u> cumulative_difficulties, u T, 
 
 int run_simulation(string DA, u T, u N,u difficulty_guess,u baseline_HR,u attack_start,u attack_stop,u attack_size, u R) {
 
+
+cout << DA << " blocks to simulate: " << BLOCKS << ". Target timespan: " << T << 
+". Start/stop (attacks size) as multiples of baseline difficulty (hashrate): " << float(attack_start)/100 << " / " << 
+float(attack_stop)/100 << " (" << float(attack_size)/100 << ")" << endl;
+
 // R is used for EMA and TSA
 
 if ( DA == "DIGISHIELD_" ) { N=N+6; } // For simulated MTP = 11 delay.
@@ -704,7 +709,7 @@ for (i=0; i <= BLOCKS-1; i++) {
 		// if (Ds[i] < 100 ) { cout << " D went < 100 at iteration " << i << " " << Ds[i] << endl; }
 	}
 	avgST /= (BLOCKS-2*N); avgHR /= (BLOCKS-2*N); avgD /= (BLOCKS-2*N); avgDtsa /= (BLOCKS-2*N);
-	cout << DA << " " << N << " ST: " << avgST << " D: " << avgD;
+	cout << DA << " " << N << " avg ST: " << avgST << " avg Diff: " << avgD << " ";
 	string temp = "blocks_" + DA + ".txt";	ofstream blocks_file(temp);
 
 	int64_t j=0;
@@ -728,7 +733,7 @@ for (i=0; i <= BLOCKS-1; i++) {
 		if (nHR[i] > 1.001) { 	attackers_time += nST[i]; attack_blocks++;
 			DA == "TSA_" ? attackers_reward += nST[i]/nDtsa[i] : attackers_reward += nST[i]/nD[i]; 
 		}
-		if ( nST[i] > 6	) { delays += nST[i] - 2; }
+		if ( nST[i] > 4	) { delays += nST[i] - 4; } // This is the delay metric. 
 		if ( STs[i] < 6*T ) { histotimes[STs[i]]++;} //	histogram
 		if (DA == "TSA_" ) { Dtsa[i] =round(Dtsa[i]*100/avgD)/100; }
 		// if (nST[i] > 8 ) { cout << " ST > 8xT " << nST[i] << endl; }
@@ -753,8 +758,8 @@ for (i=0; i <= BLOCKS-1; i++) {
 	delays = round(10000*delays/(BLOCKS-2*N))/100;
 	float stolen_blocks = stolen*attack_blocks/100;
 
-	cout << delays << "% delays. " << stolen << "% cheaper. " << attack_blocks << 
-	" attack_blocks. " << stolen_blocks  << " free blocks" << endl;
+	cout << delays << "% delays. " << attack_blocks << 
+	" attack_blocks. " << stolen << "% cheaper (" << stolen_blocks << " 'free' blocks) for on-off mining. " << endl;
 
 	if (ENABLE_FILE_WRITES) { blocks_file.close(); }
 
@@ -810,7 +815,7 @@ if (baseline_HR < 2) { cout << "baseline_D/T ratio is too small to simulate with
 USE_CN_DELAY = 0; // 1 = yes, 0=no. CN coins have a delay on timestamps
 
 
-BLOCKS = 10000; //################################## BLOCKS to simulate
+BLOCKS = 20000; //################################## BLOCKS to simulate
 
 // Get -ln(x) values for all algos #####
 for (int i=0; i <= BLOCKS-1; i++) { NEG_LOG_RAND.push_back(log( 1/fRand(0.000001,0.999999))); }
@@ -820,8 +825,8 @@ if (ENABLE_FILE_WRITES) { html_file << "<HTML><head><title>Difficulty Plots</tit
 
 //  ************** Set attack size ***************
 u attack_start = 130; // 90 = 90% of baseline D.  
-u attack_stop = 140; // 120 = 120% of baseline D.
-u attack_size = 200; // HR multiple in percent of baseline HR. SET TO 100 for NO ATTACKS
+u attack_stop = 135; // 120 = 120% of baseline D.
+u attack_size = 800; // HR multiple in percent of baseline HR. SET TO 100 for NO ATTACKS
 
 // ********* Select Algos and Run **********
  
@@ -841,15 +846,11 @@ run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop
 	cout << " start: " << attack_start << " stop: " << attack_stop << " ";
 */
 DA = "SMA_";
-N = 60; IDENTIFIER++;
+N = 144; IDENTIFIER++;
 run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
 DA = "DIGISHIELD_";  // INCLUDES THE MTP 6 BLOCK DELAY !!!
 N = 17; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0);
-
-DA = "DIGISHIELD_improved_";  // INCLUDES THE MTP 6 BLOCK DELAY !!!
-N = 15; IDENTIFIER++;
 run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0);
 
 DA = "LWMA1_";
@@ -857,15 +858,21 @@ N = 60; IDENTIFIER++;
 run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
 DA = "EMA_";
-N = 32; IDENTIFIER++;
+N = 100; IDENTIFIER++;
 run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
+
+
+/*
+DA = "DIGISHIELD_improved_"; 
+N = 15; IDENTIFIER++;
+run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0);
 
 DA = "ASERT_";
 N = 10; IDENTIFIER++; M=32;
 run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, M); 
+*/
 
-
-// }}
+// }} for checing all attack scenarios
 
 html_file.close();
 exit(0); 
@@ -896,14 +903,10 @@ DA = "DIGISHIELD_improved_";
 N = 26; IDENTIFIER++;
 run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0);
 
-// *********	the following is for copy-paste	 ***************
-
-
-DA = "DIGISHIELD_";  // INCLUDES THE MTP 6 BLOCK DELAY !!!
-N = 17; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0);
+// ================
 
 DA="TSA";
+
 // Unlike others, attack_start is relative to avg of N difficulties and is based on 
 // TSA_D for a given timestamp
 R = 1;  // only 1, 2, and 4 supported in simulation. This is only needed for TSA.
@@ -919,13 +922,5 @@ R = 4;  // only 2 and 4 supported in simulation. This is only needed for TSA.
 CONSTANT_HR =0;
 N = 600; IDENTIFIER++;
 run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size,R);
-
-DA = "LWMA4_"; 
-N = 60; IDENTIFIER++;
-run_simulation(DA, T, N, difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
- 
-DA = "DIGISHIELD_improved_"; // problems removed
-N = 17; IDENTIFIER++;
-run_simulation(DA, T, N,  difficulty_guess, baseline_HR, attack_start,attack_stop,attack_size, 0); 
 
 */
