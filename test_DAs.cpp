@@ -562,7 +562,7 @@ u ETH_(std::vector<u> timestamps,	 std::vector<u> cumulative_difficulties, u T, 
 int run_simulation(string DA, u T, u N,u difficulty_guess,u baseline_HR,u attack_start,u attack_stop,u attack_size, u R) {
 
 
-cout << DA << " blocks to simulate: " << BLOCKS << ". Target timespan: " << T << 
+cout << DA << " blocks to simulate: " << BLOCKS << ". Baseline Diff: " << BASELINE_D << ". Target timespan: " << T << 
 ". Start/stop (attacks size) as multiples of baseline difficulty (hashrate): " << float(attack_start)/100 << " / " << 
 float(attack_stop)/100 << " (" << float(attack_size)/100 << ")" << endl;
 
