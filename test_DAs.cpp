@@ -1,14 +1,16 @@
 /*
-Copyright (c) 2018 by Zawy, MIT license.
-Tests various difficulty algorithms for Cryptonote-type coins. It's complicated 
-because it's very flexible. See main() to select algorithm(s) and settings.  
-It can simulate on-off mining. It outputs timestamps and difficulties to screen, 
-file, and gnuplot. You compile and run this then refresh test_DAs.html in a browser 
-to see the output. Compile and run with 
+Copyright (c) 2018-2020 by Zawy, MIT license.
+This tests various difficulty algorithms. Unfortunately, the algorithms are terms of difficulty instead of targets. 
+This is a consequence of initially being for CryptoNote-type code. It's complicated because it's 
+flexible. See main() to select algorithm(s) and settings. It can simulate on-off mining. It outputs 
+timestamps and difficulties to screen, file, and gnuplot. There are no inputs to the program except what's in main().
+You compile and run this then refresh "test_DAs.html" in a browser to see the output. I compile and run this with: 
 g++ -std=c++11 test_DAs.cpp -o test_DAs && ./test_DAs
 
-Several of the algorithms getting average target by harmonic mean of difficulties using a 1E13 factor
-may cause overflow or underflow depending on difficulty. Difficulty might be ok in range 1E4 to 1E13.
+Several of the algorithms get average target by using the harmonic mean of difficulties which uses a 1E13 factor
+that may cause overflow or underflow depending on difficulty, T, and N. Difficulty is usuallly ok in the range 1E4 to 1E13.
+Therefore, several of the algorithms are not "production ready". A coin that adjusts targets based on past targets 
+instead of past difficulties should not use any of this code directly, but rewrite it with inverse math.
 */
 
 #include <iostream> // needed for cout << endl.
