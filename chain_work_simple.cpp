@@ -1,33 +1,40 @@
 /* Copyright (c) 2020 by Zawy, MIT license.
 
-Hashrate is a better metric than chain work for selecting a winning tip.
-We want proof of most hashrate particpating which is strangely not chain work
-difivided by time. This shows how to measure hashrate from tip data and that 
-it is correct.
+Hashrate is a better metric than chain work for selecting a winning tip because we want the highest average hashrate. 
+To everyone's surprise, this is not necessarily the tip with the highest chain work.  This is because the exponential 
+distribution of solvetimes means fast solves are more likely.  Since solvetime is in the hashrate denominator, we can 
+greatly overestimate hashrate if there are only a few samples, such as when comparing chain tips with less than 100 
+blocks since their split.  
 
 HR = hashrate
 CW = chain work
 D = difficulty
 ST = solvetime
 
-Due to fast solvetimes being more likely, if 3 blocks have more CW 
-than another tip with 4 blocks, the one with 4 may not have the higher HR because
-HR = (sum D)/(sum ST) * (N-1)/N. D is more likely pretty constant, so
-4 blocks will probably have 33% more CW. But due to the adjustment
-factor for the number of blocks, the 4-block chain will actually have 50% more
-estimated hashrate.  This program demonstrates this effect and also applies an 
-adjustment if the time to the last block of a tip is getting long. If 
-this is actually used in a coin, the time limits on timestamps shuold be very strict.
+CW = (sum D)/(sum ST)
+HR = (sum D)/(sum ST) * (N-1)/N. 
 
-The adjustment for "long time since last block" works like this. "If it's been so 
-long since the last block that if a new block shows up now and it decreases the estimated
-HR, then assume it just showed up and apply the adjustment."  This means solving the
-the following equation for tslb = time since last block to check if that time
-has been exceeded and then making the calculation if it has. current_D is the one not yet solved.
+D is usually constant (or close to it), so 4 blocks will have 33% more CW than 3 blocks. The HR of the 4 blocks is 50% more.  
+There are several assumptions in order for the comparison and HR equation to be correct:
 
-(sum N D)/(sum N ST)*(N-1)/N >? (sum N D + current_D)/(sum N ST + tslb)*(N+1-1)/(N+1)
-If yes, then 
+1. The last timestamps are the same.
+2. The last timestamps just occurred.
+3. The timestamps are correct. (at least have tight timestamp limits).
+
+The only adjustment to HR I have been able to think of that includes the "time since last block" works like this. 
+
+> If a new block shows up now and it decreases the HR from the current estimate, then assume it just showed up and apply that adjustment."  
+
+This means doing the following.
+```
+tslb = time since last block
+current_D = difficulty of the block that has not been solved.
+
+if ....
+(sum N D)/(sum N ST)*(N-1)/N > (sum N D + current_D)/(sum N ST + tslb)*N/(N+1)
+then ....
 HR = (sum N D + current_D)/(sum N ST + tslb)*N/(N+1)
+```
 
 */
 #include <iostream> 
