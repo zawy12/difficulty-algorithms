@@ -1,5 +1,7 @@
 /* Copyright (c) 2020 by Zawy, MIT license.
 
+Just compile and run this to see the results.
+
 Hashrate is a better metric than chain work for selecting a winning tip because we want the highest average hashrate. 
 To everyone's surprise, this is not necessarily the tip with the highest chain work.  This is because the exponential 
 distribution of solvetimes means fast solves are more likely.  Since solvetime is in the hashrate denominator, we can 
