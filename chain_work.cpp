@@ -143,7 +143,7 @@ d run_simulation( long int TIPS, vector<d>D, vector<d>HR, d tslb) {
 			sum_ST			+= ST;
 			sum_actual_work	+= ST*HR[j];  // This is an observation of hashes = D[j]*log(1/rand)
 			sum_TT_easiness += ST/D[j]; // TT = target*time. time*(P of finding a block) = 1/HR[j]*log(1/rand)
-			sum_S_easiness	+= log(ST/D[j])/log(2);
+			sum_S_easiness	+= log(ST/D[j]);
 		}
 		avg_ST				+= sum_ST/TIPS; // without tslb
 		actual_work		= sum_actual_work + tslb*current_HR;
@@ -173,7 +173,7 @@ d run_simulation( long int TIPS, vector<d>D, vector<d>HR, d tslb) {
 			avg_TT_work		+= (N+1)/(sum_TT_easiness + tslb/current_D)  * sum_ST/ TIPS;
 			avg_TT_HR		+= (N+1)/(sum_TT_easiness + tslb/current_D)*((N+1)-1)/(N+1)/ TIPS;
 	
-			avg_S_HR_ease	+= (sum_S_easiness + log(tslb/current_D)/log(2) + log((N+1)/N)/log(2) ) / TIPS;
+			avg_S_HR_ease	+= (sum_S_easiness + log(tslb/current_D))/log(2)*N/(N+1)  / TIPS;
 		}
 		else { 
 			avg_Z_work		+= sum_Ds / TIPS; // for code symmetry
@@ -185,7 +185,7 @@ d run_simulation( long int TIPS, vector<d>D, vector<d>HR, d tslb) {
 			avg_TT_work		+= N/sum_TT_easiness * sum_ST/TIPS ;
 			avg_TT_HR		+= N/sum_TT_easiness*(N-1)/N/ TIPS;	
 
-			avg_S_HR_ease	+= (sum_S_easiness + log((N-1)/N)/log(2)) / TIPS;
+			avg_S_HR_ease	+=  sum_S_easiness / log(2) *(N-1)/N / TIPS;
 		 }
 	}
 	cout << int(N) << " blocks took " << avg_ST << " solvetimes.\n";
@@ -201,7 +201,7 @@ d run_simulation( long int TIPS, vector<d>D, vector<d>HR, d tslb) {
 	print_out(avg_Z_work, avg_Z_HR,  avg_actual_HR,  "HR = (sum Ds)/(sum STs)*(N-1)/N incl. delay");
 	print_out(avg_H_work, avg_H_HR,  avg_actual_HR,  "harmonic_mean_Ds/avg_STs *(N-1)/N incl. delay");
 	print_out(avg_TT_work, avg_TT_HR,  avg_actual_HR,  "harmean(D/ST)*(N-1)/N incl. delay (Best HR, work is iffy)");
-	print_out(0, avg_S_HR_ease,  avg_S_HR_ease,  "entropy of harmean(D/ST)*(N-1)/N. Lower entropy = earlier tip.");
+	// print_out(0, avg_S_HR_ease,  avg_S_HR_ease,  "entropy of harmean(D/ST)*(N-1)/N. Lower entropy = earlier tip.");
 	cout << "\n"; 
 }
 
