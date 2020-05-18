@@ -2,33 +2,34 @@
 
 Just compile and run this to see the results.
 
-Hashrate is a better metric than chain work for selecting a winning tip because we want the highest average hashrate. 
-To everyone's surprise, this is not necessarily the tip with the highest chain work.  This is because the exponential 
-distribution of solvetimes means fast solves are more likely.  Since solvetime is in the hashrate denominator, we can 
-greatly overestimate hashrate if there are only a few samples, such as when comparing chain tips with less than 50 
-blocks since their split.  
+See https://github.com/zawy12/difficulty-algorithms/issues/58
 
-HR = hashrate
-CW = chain work
-D = difficulty
-ST = solvetime
-CW = (sum D)/(sum ST)
-HR = (sum D)/(sum ST) * (N-1)/N. 
-D is usually constant (or close to it), so 4 blocks will have 33% more CW than 3 blocks. 
+Chain work does not correctly determine the number of hashes performed. Chain work is the 
+sum of difficulties (multiplied by a scaling factor such as 2^32 for BTC). For a large 
+number of blocks it's usually pretty accurate, but to be precise when determining a leading 
+tip, the number of hashes for N blocks is 
 
-But if difficulty is changing, the precise equation for hashrate is:
-HR = N / sum(ST/D) * (N-1) / N
-This is the harmonic mean of the D/ST values, adjusted for the exponential distribution when there are N samples 
-(i.e. the Erlang distribution, which is the (N-1) / N factor). This is an even smaller value because the harmonic 
-mean is always less than the arithmetic mean (except when difficulty is constant they give the same result). The 
-harmonic mean is needed because we want the avg P of a hash being successful which is avg(1/D). This is not the same 
-as 1/avg(D) unless D is constant. The CW = sum Ds that everyone uses is assuming avg(1/D) = 1/avg(D) .
+Hashes = 2^256 * total_time/avg(target * solvetime)  * (N-1)/N
+or
+Hashes =  total_time * harmonic_mean(difficulty/solvetime)  * (N-1)/N
 
-The HR of the 4 blocks is 50% more.  
-There are several assumptions in order for the comparison and HR equation to be correct:
-1. The last timestamps are the same.
-2. The last timestamps just occurred.
-3. The timestamps are correct. (at least have tight timestamp limits).
+If difficulty is constant these equations simplify to:
+Hashes = sum(difficulty)  * (N-1)/N
+
+If N is large, an approximation in addition to the simplification results in the normal 
+chain work calculation hashes = sum of difficulties.
+
+All this is only if current time is the last timestamp which I'll correct below.
+
+The factor (N-1)/N corrects an error caused by the exponential distribution of solvetimes 
+having 70% more faster-than-average solvetimes than it does slower-than-average.  As more 
+blocks are found (N is larger), some will have substantially longer solvetimes that cancel 
+the effect of the fast solvetime luck. At N=100, the error is reduced to 1%. This correction 
+is the result of the Erlang distribution of N exponential solvetimes. 
+
+The second error occurs from using sum of the difficulties instead of time-weighted targets 
+as shown above. Sum(Difficulty) * (N-1)/N is the correct estimate of the number of hashes 
+performed only if difficulty is constant.  
 
 The only adjustment to HR I have been able to think of that includes the "time since last block" works like this. 
 > If a new block shows up now and it decreases the HR from the current estimate, then assume it just showed up and apply that adjustment."  
