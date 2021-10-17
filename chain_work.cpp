@@ -1,4 +1,4 @@
-/* Copyright (c) 2020 by Zawy, MIT license.
+/* Copyright (c) 2020, 2021 by Zawy, MIT license.
 
 Just compile and run this to see the results.
 
@@ -9,17 +9,9 @@ sum of difficulties (multiplied by a scaling factor such as 2^32 for BTC). For a
 number of blocks it's usually pretty accurate, but to be precise when determining a leading 
 tip, the number of hashes for N blocks is 
 
-Hashes = 2^256 * total_time/avg(target * solvetime)  * (N-1)/N
-or
-Hashes =  total_time * harmonic_mean(difficulty/solvetime)  * (N-1)/N
-
-If difficulty is constant these equations simplify to:
 Hashes = sum(difficulty)  * (N-1)/N
 
-If N is large, an approximation in addition to the simplification results in the normal 
-chain work calculation hashes = sum of difficulties.
-
-All this is only if current time is the last timestamp which I'll correct below.
+This is precise only at the moment the last block is solved.  
 
 The factor (N-1)/N corrects an error caused by the exponential distribution of solvetimes 
 having 70% more faster-than-average solvetimes than it does slower-than-average.  As more 
@@ -27,9 +19,7 @@ blocks are found (N is larger), some will have substantially longer solvetimes t
 the effect of the fast solvetime luck. At N=100, the error is reduced to 1%. This correction 
 is the result of the Erlang distribution of N exponential solvetimes. 
 
-The second error occurs from using sum of the difficulties instead of time-weighted targets 
-as shown above. Sum(Difficulty) * (N-1)/N is the correct estimate of the number of hashes 
-performed only if difficulty is constant.  
+Sum(Difficulty) * (N-1)/N is perfect only if difficulty is constant.  
 
 The only adjustment to HR I have been able to think of that includes the "time since last block" works like this. 
 > If a new block shows up now and it decreases the HR from the current estimate, then assume it just showed up and apply that adjustment."  
@@ -56,6 +46,7 @@ d TARGET_TIME=0;
 d fRand(d fMin, d fMax) { d f=(d)rand() / RAND_MAX; return fMin+f*(fMax-fMin); }
 d print_out (d work, d HR, d H, string name) {
 		cout << work << ",  " << HR << " (" << int(10000*(HR  -H)/H)/100 << "% error),  " << name << "\n";
+		return 0;
 }
 
 d run_simulation( long int TIPS, vector<d>D, vector<d>HR, d tslb) {
@@ -180,11 +171,11 @@ d run_simulation( long int TIPS, vector<d>D, vector<d>HR, d tslb) {
 			avg_Z_work		+= sum_Ds / TIPS; // for code symmetry
 			avg_Z_HR		+= sum_Ds / sum_ST * (N-1)/N / TIPS ;  
 			
-			avg_H_work		+= N*N/harmonic_sum/ TIPS; //  is smaller than sum Ds if Ds vary.
-			avg_H_HR		+= N*N/harmonic_sum/sum_ST*(N-1)/N/ TIPS;
+			avg_H_work		+= N*N/harmonic_sum / TIPS; //  is smaller than sum Ds if Ds vary.
+			avg_H_HR		+= N*N/harmonic_sum/sum_ST*(N-1)/N / TIPS;
 
-			avg_TT_work		+= N/sum_TT_easiness * sum_ST/TIPS ;
-			avg_TT_HR		+= N/sum_TT_easiness*(N-1)/N/ TIPS;	
+			avg_TT_work	+= N/sum_TT_easiness * sum_ST / TIPS ;
+			avg_TT_HR		+= N/sum_TT_easiness*(N-1)/N / TIPS;	
 
 			avg_S_HR_ease	+=  sum_S_easiness / log(2) *(N-1)/N / TIPS;
 		 }
@@ -196,28 +187,22 @@ d run_simulation( long int TIPS, vector<d>D, vector<d>HR, d tslb) {
 		cout << "\nInterpretation warning: Last block delay is > 50% unlikely.\nActual values are not averages for the given HR.\n"; 
 	}
 	cout << "\n" << avg_actual_work << " (work), " <<  
-		avg_actual_HR << " (HR) <== observation incl. delay" << "\n";	
-	cout << pow(sd_A_w, 0.5) << " " << pow(sd_A_hr, 0.5) << ", " << pow(sd_TT_hr, 0.5) << "\n\n";
+		avg_actual_HR << " (HR) Input data" << endl;	
 	print_out(sum_Ds, avg_chain_work_HR,   avg_actual_HR,  "HR = (sum Ds)/(sum STs)");
 	print_out(avg_Z_work, avg_Z_HR,  avg_actual_HR,  "HR = (sum Ds)/(sum STs)*(N-1)/N incl. delay");
-	print_out(avg_H_work, avg_H_HR,  avg_actual_HR,  "harmonic_mean_Ds/avg_STs *(N-1)/N incl. delay");
+	// print_out(avg_H_work, avg_H_HR,  avg_actual_HR,  "harmonic_mean_Ds/avg_STs *(N-1)/N incl. delay");
 	print_out(avg_TT_work, avg_TT_HR,  avg_actual_HR,  "harmean(D/ST)*(N-1)/N incl. delay (Best HR, work is iffy)");
 	// print_out(0, avg_S_HR_ease,  avg_S_HR_ease,  "entropy of harmean(D/ST)*(N-1)/N. Lower entropy = earlier tip.");
 	cout << "\n"; 
+	return 0;
 }
 
 int main() {
 srand(time(0)); // seed fRand();
-long int TIPS = 1e6; // how many "runs" to do
+long int TIPS = 1e5; // how many "runs" to do
 cout << fixed << setprecision(2);
 cout << "Hashreate (HR) = 1 hash/(target solvetime)\nTarget solvetime = 1\n";
 cout << "Difficulty = 2^256/target = avg # hashes to solution = 1/(Probability per hash)\n";
-cout << "target*time is the only method that always gives the correct actual HR.\n\n";
-cout << "Work (% error), Hashrate (% error)\n\n";
-
-// Last element of vector D and HR are an unsolved block
-vector<d>D  = {1,1,1, 1}; // Difficulties
-vector<d>HR = {1,1,1, 1}; // Hashrate
 
 // The following should be 0 except in advanced testing.
 d tslb = 0; // Time Since Last Block as fraction of target solvetime
@@ -228,28 +213,32 @@ d tslb = 0; // Time Since Last Block as fraction of target solvetime
 // much easier comparison between the different HR metrics.
 // Setting this first run to all 1's for D and HR can set the 
 // TARGET_TIME.
+
 TARGET_TIME = 0;
+
+// Last element of vector D and HR are an unsolved block
+// The last element is used if tslb != 0
+// These difficulties & hashrates are scaled in the outputs for tslb reasons.
+vector<d>D  = {1,1,1, 1}; // Difficulties
+vector<d>HR = {1,1,1, 1}; // Hashrate
+
 for (int i=0; i<HR.size(); i++) { TARGET_TIME += D[i]/HR[i];  }
 
 run_simulation(TIPS, D, HR, tslb);
 D  = {1,1,2,2, 1}; 
 HR = {1,1,1,1, 1};
 run_simulation(TIPS, D, HR, tslb);
-D  = {10,10,1,1, 1}; 
-HR = {1,1,1,1, 1};
-run_simulation(TIPS, D, HR, tslb);
 D  = {1,1,1,1, 1}; 
-HR = {1,1,1,1, 1};
+HR = {1,3,3,1, 1};
 run_simulation(TIPS, D, HR, tslb);
 D  = {1,1,1,1, 1}; 
 HR = {2,2,2,2, 2};
 run_simulation(TIPS, D, HR, tslb);
-D  = {2,2,2,2, 2}; 
-HR = {1,1,1,1, 1};
+D  = {3,3,1,1,1}; 
+HR = {2,2,1,1, 1};
 run_simulation(TIPS, D, HR, tslb);
-D  = {1,1,1,1, 1}; 
+D  = {3,3,1,1, 1}; 
 HR = {1,1,2,2, 1};
 run_simulation(TIPS, D, HR, tslb);
-
 exit(0);
 }
