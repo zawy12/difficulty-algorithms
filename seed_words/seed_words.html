@@ -6,12 +6,13 @@ This converts seed words to a sentence or adjective-noun pairs and searches for 
 seed words if you saved the hash of the seed.
 <BR><BR>
 BIP39 seed words:<br>
-<input type="text" id="seed" value="brave harsh little cigar stone giggle obtain sibling theme offer erupt poet" size=80>
+<input type="text" id="seed" value="brave able little begin stone giggle obtain sibling theme offer erupt poet" size=80>
+<BR><button onclick="convert_from_seed()">Convert seed to a sentence and adjective-noun pairs</button> 
+<BR><button onclick="generate_new_seed()">Generate new seed</button>
 
 <p id="out"></p>
 
-<button onclick="convert_from_seed()">Convert seed to a sentence and adjective-noun pairs</button> 
-<BR><BR>Sentence: 
+Sentence: 
 <BR><input type="text" id="sentence" size=100>
 <BR><button onclick="sentence_to_seed()">Convert sentence back to seed</button> The 's and s. adjustments on 4 of the 6 nouns are optional.
 <BR><BR>Adjective-noun pairs:
@@ -47,6 +48,15 @@ const n = n_a.split(" ");
 const adj = adj_a.split(" ");
 const v = v_a.split(" ");
 const BIP39 = BIP39_a.split(" ");
+
+function generate_new_seed() {
+	var temp ="";
+	for (let i = 0; i<11;i++) {
+		temp += BIP39[Math.floor(Math.random() * 2048)] + " ";
+	}
+	temp += BIP39[Math.floor(Math.random() * 2048)];
+	document.getElementById("seed").value=temp;
+}
 
 function convert_from_seed() {
 	var seed = document.getElementById("seed").value.split(" "); 
