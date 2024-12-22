@@ -105,7 +105,7 @@ parents = [[] for _ in range(blocks)]
 
 # Genesis block
 x[0] = 1 ; Nb_Nc[0] = Nb_Nc_target ; num_parents[0] = 0 ; parents[0].append(0)
-solvetime[0] = -1/x[0] * math.log(ra.random()) * L + ra.uniform(-1.0*L_var,L_var))
+solvetime[0] = -1/x[0] * math.log(ra.random()) * L
 time[0] = solvetime[0]
 
 # initialize 1st difficulty window
