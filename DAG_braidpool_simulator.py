@@ -3,63 +3,56 @@ import math
 import random as ra
 # Copyright 2025 zawy, MIT license
 
-# Usage: Just run on command line. Change variables below for testing.
+# I'm editing today without testing. See previous version if this does work.
 
-# This simulates a PoW DAG using Bob McElrath's Braidpool scheme:
-# https://github.com/braidpool/braidpool/blob/main/docs/braid_consensus.md
-#
-# It works like this: based on the user's selection, the difficulty algorithm targets the average number 
-# of parents blocks have, or 2.42 total blocks per consensus aka cohort block as his paper describes it.
-# The parent-count method seems better because you don't have to scan more blocks than your parents
-# to get your difficulty. 
-# These methods don't use timestamps, estimate hashrate, or estimate latency. The hashrate * latency cancels time units.
-# The latency of the network can be thought of as clock ticks. Non-mining nodes don't need to limit timestamps
-# because the goal is to have blocks as fast as possible.
-#
-# Notation follows Bob's paper:
-# -----------------------------
-# a = median network latency
-# L = lamdba = hashrate
-# Nb = number of blocks to scan to count Nc blocks
-# x = target = 2^256/difficulty
-# Q = 0.7035 = axL which is the target for the fastest-possible consensus with smooth difficulty.
-# 2.42 = 1+1/Q = Nb/Nc target
-# desired_parents = number of parents you want the DAA to target. Use 2 for best results.
-
-# DAA using Nb/Nc:
-# x = x1*(1 + 2.42/n - Nb/Nc/n)
-# x1 = harmonic mean of past Nb blocks' targets
-    
-# DAA using the number of parents:
-# x = x1*(1 + desired_parent/n - parents_observed/n)
-
-# Desired_parents
-
-# The Nb/Nc method needs to look back >10 Nb block to get a count of Nc because the recent NC's are not yet know.
-# But the counting parents method only needs to count the block's parents in the header to set the difficulty, and
-# get the target from those parents. A very simple DAG. With the desired_parents = 2, the average number of
-# parents is 2.000 and the StdDev is 1.000. Even more remarkable is that the mean time between 2 blocks with 1 parent
-# is 2.7182 = e times the latency.
-
-# Max latency 'a' and current hashrate L can be set to have random variability in a_var and L_var.
-# a and L values can always be = 1. They just scale everything. Average x will just be lower if they're higher.
+# Usage: Run on command line to see the DAG's difficulty algorithm (DAA) output. Change variables below for testing.
+# Detailed explaination is below.
 
 blocks      = 5000	# number of  blocks in this simulation
-a           = 1; a_var = 0  # Express 'a' as a MEDIAN = MEAN latency. a_var allows additional random variation
-use_exact_latency   = 1  # select this = 1  to make latency for every peer = 'a'
-L           = 1 ; L_var = 0  # L = lambda = hashrate. L_var allows additional random variation.
-n           = 100	  # mean lifetime of DAA filter, to smooth x variations out. Use 100 is good.
+a           = 1         # a = latency. Express 'a' as a MEDIAN and MEAN latency. Simulator randomnly varies from 0 to 2 * a 
+a_var       = 0         #  a_var allows additional random variation
+use_exact_latency   = 1 # select this = 1  to make latency for every peer exactly 'a' instead of a median.
+L           = 1         # L = lambda = hashrate. L_var allows additional random variation.
+n           = 100	# mean lifetime of DAA filter to smooth variations and slow it down. 100 is good.
+use_parents = 1         # tells program to use parents DAA instead of Nb/Nc DAA
+desired_parents = 2     # 2 for this value is optimal
+Nb          = 10        # Blocks for Nb/Nc DAA to look into the past to count Nc blocks  
+Q           = 0.703467  # Bob's theoretical optimal setting of Q = a*x*L to get fastest blocks. This value is solution to Q=e^(-Q/2). 
+Nb_Nc_target = (1+1/Q)  # This is 2.42 from the above Q, but now 2.71828 appears better.
 
-use_parents = 1 # tells program to use parents DAA instead of Nb/Nc DAA
-desired_parents = 2 # optimal is if this is 2
+'''
+This simulates two PoW DAA's for Bob McElrath's Braidpool DAG. They target a DAG width without using timestamps or
+estimating hashrate or latency. This is possible because increasing hashrate or increasing latency cause DAG
+width to increase. Increasing difficulty can make it narrow again. A hashrate * latency factor cancels time units in both.
+When a narrow DAG is operating at the fastest speed to get consensus, changing the difficulty becomes very effective
+at changing the DAG width to keep it achieving consensus at the fastest speed possible. Bob's Braidpool article discusses 
+the math. Consensus is achieved when the DAG width is 1, i.e. all parents and children of a certain "generation" of blocks
+see only 1 block in the middle and it is therefore easy to have consensus and everyone know the current state. This 1-block
+width occurs only if the hashrate for the current difficulty setting is slow that there have not been any blocks mined before
+or after that block for 1 latency period before and 1 period after it. But for this 1-block consensus to occur as fast as possible,
+the block solves must be comeing as fast as possible. Bob's Braidpool article discusses the math to try to identify the optimum 
+solve rate (i.e. hashrate * target) to balance these two opposing effects:
+https://github.com/braidpool/braidpool/blob/main/docs/braid_consensus.md
 
-Nb          = 10    # blocks for DAA. A low Nb*n with correct Nb/Nc mean and low StdDev in Nc/Nc and x is the best DAA. 
-Nc_adjust   = 0   # Increasing this above 0 may help if Nb is small, less than 20.  
+It turns out the fastest consensus occurs when Bob's Nb/Nc metric for DAG width = 2.71828, 10% more than what his theory predicted.  
+While running this simulator to try to test his math, I realized there could be a much easier metric to measure which is the
+average number of parents. It turns out a mean of 2.000 parents gives the fastest consensus, and the StdDev of parents is
+1.0000. This results in Bob's Nb/Nc ratio being 2.71828 and the average time between consensus is 2.71828 times the latency.
+To be clear, to set a target (2^256 / difficulty) for a particular block being mined, the consensus rule is that he and future
+validators only count his parents (which will typically be from 1 to 4) and get the harmonic mean of their targets and then use
+the equation below. This is incredibly simple compared to other DAGs and it may be the fastest possible consensus.
 
-Q           = 0.703467 # theoretical optimal setting of Q = a*x*L to get fastest blocks that solves Q=e^(-Q/2) 
-Nb_Nc_target = (1+1/Q)
+DAA using the number of parents:
+-------------------------------
+x = x1*(1 + 2/n - parents_observed/n)
+x1 = harmonic mean of the parent's targets
 
-
+DAA using Nb/Nc:
+---------------
+x = x1*(1 + 2.718/n - Nb/Nc/n)
+x1 = harmonic mean of past Nb blocks' targets
+    
+'''
 if use_exact_latency: print("\nUser choose to use 'a' as the exact latency between every peer.\n")
 
 if use_parents ==1:
@@ -118,7 +111,7 @@ time[0] = solvetime[0]
 # initialize 1st difficulty window
 for h in range(1,Nb+20): # plus 20 because delay prevents some blocks from deing seen
     x[h] = 1 ; Nb_Nc[h] = Nb_Nc_target ; num_parents[h] = 1 ; parents[h].append(h-1)
-    solvetime[h] = -1/x[h-1] * math.log(ra.random()) * (L + ra.uniform(-1.0*L_var,L_var))
+    solvetime[h] = -1/x[h-1] * math.log(ra.random()) * L
     time[h] = solvetime[h] + time[h-1] 
     
 ##### START MINING #######
@@ -129,7 +122,7 @@ for h in range(Nb+20,blocks):
 	# We don't know x[h] unless we know parents. But parents change as solvetime
 	# increases. The solution would be to calculate delays, find parents, get x[h], 
 	# hash a little which gets closer to the delays, find parents again, ... repeat.
-    solvetime[h] = -1.0/x[h-1] * math.log(ra.random()) * (L + ra.uniform(-1.0*L_var,L_var))
+    solvetime[h] = -1.0/x[h-1] * math.log(ra.random()) * L
     time[h] = solvetime[h] + time[h-1]   	
 	
 # for this block, find non-Nc blocks (siblings), parents, and avoid incest
@@ -181,7 +174,7 @@ for h in range(Nb+20,blocks):
                 Nc += Nc_blocks[Nb_blocks[i]]
                 x1 = Nb_temp/sum_x_inv  # harmonic mean
                 if Nc == 0: Nc=1 # prevent divide by zero
-                Nb_Nc[h] = Nb_temp/(Nc+Nc_adjust)
+                Nb_Nc[h] = Nb_temp/Nc
     
 # 	calculate x[h]
         # CF = 0.7035 / W(Nb/Nc - 1) where W()=lambert function
