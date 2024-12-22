@@ -28,13 +28,13 @@ import random as ra
 
 # Max latency and current hashrate with random variability levels
 # a and L values can always be = 1. They just scale everything. Average x will just be lower if they're higher.
-a           = 1; a_var = 0  # Express 'a' as MEDIAN latency. a_var allows additional random variation
+a           = 1; a_var = 0  # Express 'a' as a MEDIAN = MEAN latency. a_var allows additional random variation
 use_exact   = 1 
 if use_exact: print("User chose to use 'a' as the exact latency between every peer.")
 L           = 1 ; L_var = 0  # L = lambda = hashrate. L_var allows additional random variation.
 Nb          = 100    # blocks for DAA. A low Nb*n with correct Nb/Nc mean and low StdDev in Nc/Nc and x is the best DAA. 
 Nc_adjust   = 0   # Increasing this above 0 may help if Nb is small, less than 20.  
-n           = 10	  # mean lifetime of DAA filter, to smooth it out. Use 1 or more.
+n           = 1	  # mean lifetime of DAA filter, to smooth it out. Use 1 or more.
 Q           = 0.703467 # theoretical optimal setting of Q = a*x*L to get fastest blocks that solves Q=e^(-Q/2) 
 Nb_Nc_target = (1+1/Q)
 blocks      = 5000	# number of  blocks in this simulation
@@ -108,14 +108,15 @@ for h in range(Nb+20,blocks):
     for i in range(1,Nb + 20): # must be less than 20 blocks within 1 latency
         next_i = 0
         latency = (ra.random()*2*a + ra.uniform(-a_var,a_var)) # 2x assumes user assigned a = median.
-        if use_exact==1 : latency = a 
+        if use_exact==1 : latency = a
         if latency > time[h] - time[h-i]:   # Can't see block h-i due to latency
         # Remember all non-Nc blocks. A great cheat to get Nc using our global order & time knowledge.
         # Assumes every miner is honest. 
             not_a_common_ancestor[h-i] = 1
         else:
             # combined with the above, the following determines if the previous block was an Nc consensus blocks.
-            if not_a_common_ancestor[h-i-1] == 0: Nc_blocks[h-i] = 1
+            # The latency before & after the h-i block was less than the 2 solvetimes.
+            if not_a_common_ancestor[h-i-1] == 0: Nc_blocks[h-i-1] = 1
             if len(Nb_blocks) < Nb: 
                 Nb_blocks.append(h-i) # This assumes hash-based ordering so validators see same list.
             remember_ancestors(h-i)  # This function finds all recently-seen blocks in 'seen' list.
@@ -156,10 +157,11 @@ for h in range(Nb+20,blocks):
     x[h] = x1*(1 + CF/n - 1/n) 
     
 # end generating blocks
+
 print("             Mean  StdDev")
 print("x:           {:.3f} {:.3f} (Try to get smallest SD/mean for a given Nb*n.)".format(st.harmonic_mean(x), st.pstdev(x)))
 print("solvetime:   {:.3f} {:.3f}".format(st.mean(solvetime), st.pstdev(solvetime)) )# 
-print("Nb/Nc:       {:.3f} {:.3f} (2.42 is target with low SD.)".format(st.mean(Nb_Nc), st.pstdev(Nb_Nc)))
+print("Nb/Nc:       {:.3f} {:.3f} (2.42 is target with low SD.)".format(blocks/sum(Nc_blocks), st.pstdev(Nb_Nc)))
 print("num_parents: {:.3f} {:.3f}".format(st.mean(num_parents), st.pstdev(num_parents)))
 print("Nc blocks: " + str(blocks - sum(not_a_common_ancestor)))
-print("Time/Nc/a: {:.3f} (The speed of consensus as a multiples of latency.)".format(time[blocks-1]/(blocks - sum(not_a_common_ancestor))/a))
+print("Time/Nc/a: {:.3f} (The speed of consensus as a multiple of latency.)".format(time[blocks-1]/(sum(Nc_blocks))/a))
