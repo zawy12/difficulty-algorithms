@@ -11,9 +11,9 @@ import random as ra
 blocks      = 5000	# number of  blocks in this simulation
 a           = 1         # a = latency. Express 'a' as a MEDIAN and MEAN latency. Simulator randomnly varies from 0 to 2 * a 
 a_var       = 0         #  a_var allows additional random variation
-use_exact_latency   = 1 # select this = 1  to make latency for every peer exactly 'a' instead of a median.
+use_exact_latency = 1   # select this = 1  to make latency for every peer exactly 'a' instead of a median.
 L           = 1         # L = lambda = hashrate. L_var allows additional random variation.
-n           = 100	# mean lifetime of DAA filter to smooth variations and slow it down. 100 is good.
+n           = 100	    # mean lifetime of DAA filter to smooth variations and slow it down. 100 is good.
 use_parents = 1         # tells program to use parents DAA instead of Nb/Nc DAA
 desired_parents = 2     # 2 for this value is optimal
 Nb          = 10        # Blocks for Nb/Nc DAA to look into the past to count Nc blocks  
@@ -105,7 +105,7 @@ parents = [[] for _ in range(blocks)]
 
 # Genesis block
 x[0] = 1 ; Nb_Nc[0] = Nb_Nc_target ; num_parents[0] = 0 ; parents[0].append(0)
-solvetime[0] = -1/x[0] * math.log(ra.random()) * (L + ra.uniform(-1.0*L_var,L_var))
+solvetime[0] = -1/x[0] * math.log(ra.random()) * L + ra.uniform(-1.0*L_var,L_var))
 time[0] = solvetime[0]
 
 # initialize 1st difficulty window
