@@ -2,12 +2,13 @@
 
 # Copyright 2025 zawy, MIT license
 
-# This command-line script tests two different difficulty adjustment algorithms (DAA's) for a DAG PoW with fast consensus. 
+# This command-line script tests 3 different difficulty adjustment algorithms (DAA's) for a DAG PoW with fast consensus. 
 # They are remarkable in not needing timestamps or measurements of hashrate or latency. 
 
 # Discussion is at the end of this file.
 
-# Usage: Run on command line to see the output. Change variables below for testing.
+# Usage: Run on command line to see the output. Change variables below for testing. The matplotlib.pyplot module 
+# isn't a requirement but shows the plots.
 
 import statistics as st
 import math
@@ -16,7 +17,7 @@ import random as ra
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-import networkx as nx
+# import networkx as nx
 
 # from scipy.special import lambertw
 
