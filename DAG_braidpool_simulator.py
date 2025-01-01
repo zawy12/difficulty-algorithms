@@ -14,7 +14,7 @@ import statistics as st
 import math
 import random as ra
 import sys
-import numpy as np
+import numpy as np # on windows i had to use "py -m pip install numpy"
 try: import matplotlib.pyplot as plt
 except ImportError: print("Install matplotlib to see plots.")
 try: import networkx as nx
@@ -22,13 +22,13 @@ except ImportError: print("Install networkx & pygraphviz to see DAG graph.")
 
 #  Nb blocks are the number of blocks to look back in the past to find parents and Nc blocks. 
 #  Nc blocks are 1-block cohorts, i.e. all ancestors & descendants are connected through them.
-DAA_0           = 0       # enter 1 to do Nb/Nc DAA
-DAA_1           = 0       # Parent DAA
-DAA_2           = 0       # SMA DAA
-show_single_plots = 0
-show_combined_plots  = 1       # plot target and parent results for DAAs together
-show_dag        = 0
-blocks          = 5000	  # number of  blocks in this simulation
+DAA_0           = 1       # = 1 do Nb/Nc DAA
+DAA_1           = 1       # = 1 do Parent DAA
+DAA_2           = 1       # = 1 do SMA DAA
+show_single_plots = 1
+show_combined_plots  = 0       # plot target and parent results for DAAs together
+show_dag        = 0         
+blocks          = 10000	  # number of  blocks in this simulation
 base_latency    = 0.67    # base latency. Enter it as a MEDIAN or MEAN latency. Use = 1 for time to be in units of latency. 
 base_hashrate   = 0.66    # base hashrate, lambda.  normally use 1
 use_exact_latency = 1   # '1' to make latencies exactly 'a' or 'a2' instead of the median o
@@ -37,24 +37,24 @@ latency_var = 0         # allows an additional random variation in latency.
 # Topology check:
 latency_2   = 1         # latency level #2 as a multiple or fraction of latency_. Set = 1 if every miner is the same. 
 hrf_latency_2  = 0.25   # Hashrate fraction that has latency_2.
-n0          = 60    # Filter for Nb/Nc DAA. Mean lifetime of DAA filter to smooth variations and slow it down. 
-n1          = 75    # Filter for Parent DAA, needs to be Nb*n/13 for equal stability to Nb/Nc DAA
-n2          = 190    # Filter for SMA. This is about 2.5x the n value for the parent method to get equal stability.
+n_0          = 60    # Filter for Nb/Nc DAA. Mean lifetime of DAA filter to smooth variations and slow it down. 
+n_1          = 75    # Filter for Parent DAA, needs to be Nb*n/16 for equal stability to Nb/Nc DAA
+n_2          = 190    # Filter for SMA. This is about 2.5x the n value for the parent method to get equal stability.
 sma_block_time  = 1.53  # SMA block time desired. Use 1.53 if latency and latency = 0.67. 1.53/0.67 = 2.3 important?
 parents_desired = 1.44  # 1.44 gives Nb/Nc =~ 2.42, the ideal.
-Nb0         = 20      # Blocks for Nb/Nc to look into past. Smaller is faster but can miss parents & not see Nc blocks if too small. Needs to be 20 for constant hashrate to almost always see at least 1 Nc.
-Nb1  = int(parents_desired * 4)    # >7 blocks solved in 1 latency-adjusted 'block time' will miss a parent 
-Nb2  = int(10*base_latency/sma_block_time + 0.5)  # >7 blocks solved in 1 latency-adjusted block-time will miss a parent  
+Nb_0         = 20      # Blocks for Nb/Nc to look into past. Smaller is faster but can miss parents & not see Nc blocks if too small. Needs to be 20 for constant hashrate to almost always see at least 1 Nc.
+Nb_1  = int(parents_desired * 3)    # >7 blocks solved in 1 latency-adjusted 'block time' will miss a parent 
+Nb_2  = int(10*base_latency/sma_block_time + 0.5)  # >7 blocks solved in 1 latency-adjusted block-time will miss a parent  
 Nc_adjust       = 1.35   # To make Nb/Nc DAA more accurate, this needs to be about 1.3. Works for all settings.
 Q               = 0.703467  # 0.703467 is optimal Q = a*x*L to get fastest 1-block cohort. This value solves Q=e^(-Q/2).  
 Nb_Nc_target    = (1+1/Q)   # For Nb/Nc DAA, this is our target Nb/Nc = 2.4215 from the above Q. 
 buffer = 20
-use_attack          = 1     # if = 1, use on-off mining attack 
-attack_length       = 1000  # number of blocks for on-off cycle if latency changes are not also selected
+use_attack          = 0     # if = 1, use on-off mining attack 
+attack_length       = 4000  # number of blocks for on-off cycle if latency changes are not also selected
 attack_size         = 2     # multiplier for the increase in hashrate. Nb selection below assumes > 1.
     
-use_latency_change     = 1     # if = 1, same kind of "attack" on latency. 
-latency_change_length  = 1000   # number of blocks for on-off cycles if mining attack above is not also selected
+use_latency_change     = 0     # if = 1, same kind of "attack" on latency. 
+latency_change_length  = 4000  # number of blocks for on-off cycles if mining attack above is not also selected
 latency_change_size    = 2     # multiplier for the increase in latency. Nb selection below assumes > 1.
 
 # Pre-populate solvetime list so that we can compare DAAs better. Later, solvetime[h] *= 1/hashrate[h]/x[h] during runs.
@@ -62,10 +62,12 @@ solvetime_all = [-math.log(ra.random()) for _ in range(blocks)]
 latency     = np.full(blocks, base_latency,  dtype=float) # fill blocks with base latency in sending & recieving blocks
 hashrate    = np.full(blocks, base_hashrate, dtype=float) # fill blocks with base hashrate
 
+DAA = 0
+
 # The following cheat catches all parents so that plots don't lie about chain width. In an actual chain, Nb must have some limit and will cause forks if a parent falls outside the range, and PoW will pick the winner. It can be considered a weak confirmation of consensus. Larger Nb slows simulation down.
 if use_latency_change: 
-    Nb1 *= latency_change_size
-    Nb2 *= latency_change_size
+    Nb_1 *= latency_change_size
+    Nb_2 *= latency_change_size
 
 # if needed, print notifications that hashrate and latency will be changed
 if use_exact_latency: 
@@ -80,6 +82,7 @@ elif use_latency_change:
     print("Latency change size = {:.2f}, Latency change length = {:.2f} blocks".format(latency_change_size, latency_change_length))
 
 # pre-populate hashrate and latency changes for all DAA runs
+latency2 = [0]*(blocks)
 attack_on = 0 ; latency_change_on = 0 
 for h in range(blocks):
     # If on-off mining attack and latency changes are selected, just show 1 cycle of each based on total blocks        
@@ -99,16 +102,18 @@ for h in range(blocks):
         if latency_change_on: latency[h] *= latency_change_size
         if h > latency_change_length and h%latency_change_length == 0:
             if latency_change_on == 0: latency_change_on = 1
-            else:  latency_change_on = 0   
-    
+            else:  latency_change_on = 0 
+
+    # if h%500 == 0: latency_2 += 1
+    # latency2[h] = latency_2*base_latency/10
     # randomly change the populated latencies for the fraction of blocks ('miners') who have latency_2
     if ra.random() < hrf_latency_2: latency[h] *= latency_2 # latency[h] was already pre-loaded with latency_
     if not use_exact_latency: # make latency vary randomly from 0 to 2x with possible additional variation. 
         latency[h] = max(0,(ra.random()*2*latency[h] + ra.uniform(-latency_var,latency_var))) 
 
 # initialize arrays
-def initialize_global_arrays():
-    global Nc_blocks, Nb_Nc, time, x, num_parents, solvetime, parents, d
+def initialize_global_arrays(DAA_, Nb_):
+    global Nc_blocks, Nb_Nc, time, x, d, num_parents, solvetime, parents, Nb, DAA
     Nc_blocks = np.zeros(blocks, dtype=bool)   # index is height. True = a consensus block. 
     Nb_Nc     = np.zeros(blocks, dtype=float)  # The ratio Nb/Nc as observed by the block at height h looking back Nb
     time      = np.zeros(blocks, dtype=float)  # Simulator has access to precise time for ordering to make things easy. 
@@ -116,6 +121,8 @@ def initialize_global_arrays():
     d         = np.full(blocks, 1, dtype=float)
     num_parents=np.zeros(blocks, dtype=float)  # Number of parents a block has.
     solvetime = np.zeros(blocks, dtype=float)
+    Nb        = Nb_    
+    DAA       = DAA_
 
     # parents[of h][are these h's]  This sublist will have varying # of elements.
     parents = [[] for _ in range(blocks)]
@@ -132,21 +139,21 @@ def print_table(data):
 def print_messages():
         
     if DAA == 0: 
-        print("=====   User selected Nb/Nc ratio DAA =====")
+        print("=====   Nb/Nc ratio DAA  =====")
         print("x = x_harmonic_mean_of_Nb * ( 1 + (Nb_Nc_desired - Nb_Nc_observed)/n)\n")
         Nb_Nc_temp = int(Nb_Nc_target*10000)/10000
         data = [['latency','hashrate','Nb','Nb/Nc desired','filter n', 'blocks'],
-            [base_latency,base_hashrate,Nb,Nb_Nc_temp,n0,blocks]]
+            [base_latency,base_hashrate,Nb,Nb_Nc_temp,n_0,blocks]]
     elif DAA == 1: 
-        print("=====   User selected parent-count DAA. =====")
+        print("=====   Parent-count DAA  =====")
         print("x = x_harmonic_mean_of_parents * ( 1 + (parents_desired - parents_measured)/n)\n")
         data = [['latency','hashrate','parents desired','filter n', 'blocks'],
-            [base_latency,base_hashrate,parents_desired,n1, blocks]]
+            [base_latency,base_hashrate,parents_desired,n_1, blocks]]
     elif DAA == 2: 
-        print("=====   User selected SMA DAA  =====")
+        print("=====   SMA DAA  =====")
         print("x = x_harmonic_mean_of_n * timespan_observed / timespan_desired\n")
         data = [['latency','hashrate', 'block_time','n', 'blocks'],
-            [base_latency,base_hashrate,sma_block_time,n2,blocks]]  
+            [base_latency,base_hashrate,sma_block_time,n_2,blocks]]  
 
     print_table(data)
     
@@ -154,8 +161,7 @@ def do_mining():
     Nb_blocks       = np.zeros(Nb,     dtype=np.int32) # Array of size Nb. Will store heights
     seen            = np.zeros(blocks, dtype=bool)   # index is height. True = 'seen' = it's not a parent block.
     had_a_sibling   = np.zeros(blocks, dtype=bool) # if it had a sibling within latency before or after, it's not an Nc.
-    global solvetime
-    solvetime       = np.zeros(blocks, dtype=float)
+    global solvetime; solvetime       = np.zeros(blocks, dtype=float)
     
 # Genesis block
     x[0] = 1 ; Nb_Nc[0] = Nb_Nc_target ; num_parents[0] = 0 ; parents[0].append(0)
@@ -170,8 +176,6 @@ def do_mining():
         time[h] = solvetime[h] + time[h-1] 
         Nc_blocks[h] = int(2*(1+1/Nb_Nc_target)*ra.random()) # trying to estimate
         d[h]=1/x[h]
-        
-    # sum_d = d[Nb+buffer]*(Nb+buffer) # for SMA DAA to speed it up
 
 # Start Mining
     for h in range(Nb+buffer,blocks): 
@@ -221,7 +225,6 @@ We've finished looking into the past Nb ancestors for block h. In practice, a sc
         num_parents[h] = len(parents[h])
          
         sum_x_inv = 0
-        sum_D = 0
 # Using Nb/Nc DAA.
         if DAA == 0:
             Nc = 0 
@@ -231,7 +234,7 @@ We've finished looking into the past Nb ancestors for block h. In practice, a sc
             # if Nc == 0: print(Nb_blocks[m])    
             x1 = Nb/sum_x_inv  # harmonic mean
             Nb_Nc[h] = Nb/(Nc+Nc_adjust)
-            x[h] = x1*(1 + (Nb_Nc_target - Nb_Nc[h])/n0)
+            x[h] = x1*(1 + (Nb_Nc_target - Nb_Nc[h])/n_0)
         
             # CF = Q/max(0.1,lambertw(complex(max(.1,Nb_Nc[h]-1)),k=0).real)   
             # x[h] = x1*(1 + (CF - 1)/n0)        
@@ -243,28 +246,28 @@ We've finished looking into the past Nb ancestors for block h. In practice, a sc
             for m in range(int(num_parents[h])):
                 sum_x_inv += 1/x[parents[h][m]]
             x1 = num_parents[h]/sum_x_inv
-            x[h] = x1*(1 + (parents_desired - num_parents[h])/n1)           
+            x[h] = x1*(1 + (parents_desired - num_parents[h])/n_1)           
 
         # Using SMA DAA            
         elif DAA == 2:
-            if h < n2:
+            if h < n_2:
                 for m in range(h):
                     sum_x_inv += 1/x[h-m-1]
                 x1 = 1/sum_x_inv  # h divides out in next line
                 x[h] = x1*(time[h]-time[0])/sma_block_time
-               # d[h] = 1/x[h]
+                d[h] = 1/x[h]
             else: 
                 for m in range(Nb): # avoids averaging sibling blocks
                     sum_x_inv += 1/x[Nb_blocks[m]] 
                     # sum_D += d[Nb_blocks[m]]
-                for m in range(n2-Nb): # get the rest of n2. need to check for off-by-1
+                for m in range(n_2-Nb): # get the rest of n2. need to check for off-by-1
                     sum_x_inv += 1/x[Nb_blocks[Nb-1]-m-1] # m is initially 0. Starts at 1 block before oldest Nb
                     # sum_D += d[Nb_blocks[Nb-1]-m-1]                
                 x1 = 1/sum_x_inv # n2 divides out in next line
                 # if topology is uneven, a sibling could be older than newest Nb so timespan not quite right 
                 # x1 = 1/sum_D
-                x[h] =  x1*(time[Nb_blocks[0]] - time[Nb_blocks[0]-n2])/sma_block_time
-                # d[h] = 1/x[h]
+                x[h] =  x1*(time[Nb_blocks[0]] - time[Nb_blocks[0]-n_2])/sma_block_time
+                d[h] = 1/x[h]
 
 def print_finish_message():
     global SD_x ; SD_x = st.pstdev(x)
@@ -278,30 +281,55 @@ def print_finish_message():
     print("num_parents: {:.3f} {:.3f}".format(st.mean(num_parents), SD_parents))
     print("Time per Nc block per mean latency: {:.3f}\n".format(time[blocks-1]/(sum(Nc_blocks))/st.mean(latency)))
 
-def do_all():
-    initialize_global_arrays()
+def single_plots():
+    height = np.arange(0,blocks,1)
+    mean_length = 300 # smooth out the variables we're interested in
+    
+    DAG_width = [st.mean(num_parents)]*(blocks)
+    for i in range(100,blocks):
+        n = min(i,mean_length)
+        DAG_width[i] = st.mean(num_parents[i-n:i])
+        
+    consensus_time_mean = [0.5]*(blocks)
+    for i in range(100,blocks):
+        n = min(i,mean_length)
+        consensus_time_mean[i] = (time[i] - time[i-n])/max(1,sum(Nc_blocks[i-n:i]))/10
+
+    plt.plot(height, x, label='target x',  linewidth=2)
+    plt.plot(height, DAG_width, label='Parents, ' + str(mean_length) + '-block mean', linewidth=2)
+    # plt.plot(height, latency, label='latency')
+    # plt.plot(height, latency2, label='latency', linewidth=2)
+    plt.plot(height, hashrate, label='hashrate', linewidth=2)
+    plt.plot(height, consensus_time_mean, label='(time per Nc)/10, '+ str(mean_length) +'-block mean', linewidth=2)
+ 
+    if DAA == 0: title = "Nb/Nc DAA, Nb = {:.0f}, n = {:.0f}:".format(Nb_0,n_0)
+    if DAA == 1: title = "Parent DAA, parents = {:.2f}, n = {:.0f}".format(parents_desired, n_1)
+    if DAA == 2: title = "SMA DAA, block_time = {:.2f}, n = {:.0f}".format(sma_block_time, n_2)  
+
+    plt.title(title)
+    plt.xlabel('height')
+    plt.ylabel('target, hashrate, DAG width. 1/10th Nc_time')
+    plt.legend()
+    manager = plt.get_current_fig_manager()
+    manager.resize(*manager.window.maxsize())
+    plt.show()
+
+def do_all(DAA_,Nb_):
+    initialize_global_arrays(DAA_, Nb_)
     print_messages()
     global start, finish_time
     start = timer.time()
     do_mining()
     finish_time = timer.time() - start
     print_finish_message()
+    if show_single_plots: single_plots()
+    return x, SD_x, num_parents, SD_parents
 
-DAA = 0
-Nb = Nb0
-do_all()
-x_0             = x
-num_parents_0   = num_parents
-SD_x_0          = SD_x
-SD_parents_0    = SD_parents
+# This mess is needed for the combined plot
+if DAA_0: (x_0, SD_x_0, num_parents_0, SD_parents_0) = do_all(0,Nb_0)
+if DAA_1: (x_1, SD_x_1, num_parents_1, SD_parents_1) = do_all(1,Nb_1)
+if DAA_2: (x_2, SD_x_2, num_parents_2, SD_parents_2) = do_all(2,Nb_2)
 
-DAA = 1
-Nb = Nb1
-do_all()
-x_1 = x
-num_parents_1   = num_parents
-SD_x_1          = SD_x
-SD_parents_1    = SD_parents
 '''
 count = [0]*(7)
 for i in range(blocks):
@@ -316,14 +344,6 @@ for i in range(blocks):
 for i in range(7): print(count[i]/blocks)
 
 '''
-DAA = 2
-Nb = Nb2
-do_all()
-x_2 = x
-num_parents_2   = num_parents
-SD_x_2          = SD_x
-SD_parents_2    = SD_parents
-
 def graph_dag():
     #### Generate DAG graph 
     ll = 50 # number of nodes
@@ -350,40 +370,6 @@ def graph_dag():
     except ImportError:
         print("Please install pygraphviz for this visualization method.")
 
-def single_plots():
-    height = np.arange(0,blocks,1)
-    mean_length = 300 # smooth out the variables we're interested in
-    
-    DAG_width = [st.mean(num_parents)]*(blocks)
-    for i in range(100,blocks):
-        n = min(i,mean_length)
-        DAG_width[i] = st.mean(num_parents[i-n:i])
-        
-    consensus_time_mean = [0.5]*(blocks)
-    for i in range(100,blocks):
-        n = min(i,mean_length)
-        consensus_time_mean[i] = (time[i] - time[i-n])/max(1,sum(Nc_blocks[i-n:i]))/10
-
-    plt.plot(height, x, label='target x',  linewidth=2)
-    plt.plot(height, DAG_width, label='Parents, ' + str(mean_length) + '-block mean', linewidth=2)
-    plt.plot(height, latency, label='latency')
-    plt.plot(height, hashrate, label='hashrate')
-    # if not DAA == 2:
-    plt.plot(height, consensus_time_mean, label='(time per Nc)/10, '+ str(mean_length) +'-block mean', linewidth=2)
-    if DAA == 0: plt.plot(height, Nb_Nc/10, label='Nb/Nc/10')
-
-    if DAA == 0: title = "Nb/Nc DAA, Nb = {:.0f}, n = {:.0f}:".format(Nb,n0)
-    if DAA == 1: title = "Parent DAA, parents = {:.2f}, n = {:.0f}".format(parents_desired, n1)
-    if DAA == 2: title = "SMA DAA, block_time = {:.2f}, n = {:.0f}".format(sma_block_time, n2)  
-
-    plt.title(title)
-    plt.xlabel('height')
-    plt.ylabel('target, hashrate, DAG width. 1/10th Nc_time')
-    plt.legend()
-    manager = plt.get_current_fig_manager()
-    manager.resize(*manager.window.maxsize())
-    plt.show()
-
 def combined_plots():
     print("A 2nd plot will pop up after closing the 1st one. The 2nd one may take some time.")
     height = np.arange(0,blocks,1)
@@ -395,9 +381,9 @@ def combined_plots():
     plt.plot(height, latency,   label='latency')
     plt.plot(height, hashrate,  label='hashrate')
 
-    title = "Nb/Nc DAA, Nb = {:.0f}, n = {:.0f}, SD_x = {:.3f}\n".format(Nb0,n0, SD_x_0)
-    title += "Parent DAA, parents = {:.2f}, n = {:.0f}, SD_x = {:.3f}\n".format(parents_desired, n1, SD_x_1)
-    title += "SMA DAA, block_time = {:.2f}, n = {:.0f}, SD_x = {:.3f}".format(sma_block_time, n2, SD_x_2)  
+    title = "Nb/Nc DAA, Nb = {:.0f}, n = {:.0f}, SD_x = {:.3f}\n".format(Nb_0,n_0, SD_x_0)
+    title += "Parent DAA, parents = {:.2f}, n = {:.0f}, SD_x = {:.3f}\n".format(parents_desired, n_1, SD_x_1)
+    title += "SMA DAA, block_time = {:.2f}, n = {:.0f}, SD_x = {:.3f}".format(sma_block_time, n_2, SD_x_2)  
 
     plt.title(title)
     plt.xlabel('height')
@@ -422,9 +408,9 @@ def combined_plots():
     plt.plot(height, latency, label='latency')
     plt.plot(height, hashrate, label='hashrate')
   
-    title = "Nb/Nc DAA, Nb = {:.0f}, n = {:.0f}, SD_parents = {:.3f}\n".format(Nb0,n0, SD_parents_0)
-    title += "Parent DAA, parents = {:.2f}, n = {:.0f}, SD_parents = {:.3f}\n".format(parents_desired, n1, SD_parents_1)
-    title += "SMA DAA, block_time = {:.2f}, n = {:.0f}, SD_parents = {:.3f}".format(sma_block_time, n2, SD_parents_2)
+    title = "Nb/Nc DAA, Nb = {:.0f}, n = {:.0f}, SD_parents = {:.3f}\n".format(Nb_0,n_0, SD_parents_0)
+    title += "Parent DAA, parents = {:.2f}, n = {:.0f}, SD_parents = {:.3f}\n".format(parents_desired, n_1, SD_parents_1)
+    title += "SMA DAA, block_time = {:.2f}, n = {:.0f}, SD_parents = {:.3f}".format(sma_block_time, n_2, SD_parents_2)
 
     plt.title(title)
     plt.xlabel('height')
@@ -434,7 +420,6 @@ def combined_plots():
     manager.resize(*manager.window.maxsize())
     plt.show()
 
-if show_single_plots: single_plots()
 if show_combined_plots: combined_plots()
 if show_dag: graph_dag()
 
