@@ -391,10 +391,10 @@ def cohorts(initial_cohort=None, older=False):
         cohort = frozenset([initial_cohort])
     else:
         cohort = initial_cohort or frozenset([0])
-    head   = nexthead = next_generation(cohort, older)
+    head   = next_generation(cohort, older)
     while True :
         yield cohort
-        gen         = head      = nexthead
+        gen         = head
         cparents    = ancestors = {h: next_generation(h, not older) - cohort for h in head}
         while True:                                                                            # DFS search
             gen = next_generation(gen, older)
@@ -409,9 +409,9 @@ def cohorts(initial_cohort=None, older=False):
             if(all([p in ancestors] for p in frozenset.union(*[cparents[g] for g in gen]))     # we have no missing ancestors
                 and all([h in ancestors[g] for h in head for g in gen])):                      # and everyone has all head beads as ancestors
                 cohort = frozenset.intersection(*[ancestors[g] for g in gen])                  # We found a new cohort
-                nexthead = next_generation(cohort, older) - cohort                             # the youngest beads outside the candidate cohort
-                tail = next_generation(nexthead, not older)                                    # the oldest beads in the candidate cohort
-                if all([h in ancestors and p in ancestors[h] for h in nexthead for p in tail]):# yield if all beads in the head are ancestors of all beads
+                head = next_generation(cohort, older) - cohort                                 # the youngest beads outside the candidate cohort
+                tail = next_generation(head, not older)                                        # the oldest beads in the candidate cohort
+                if all([h in ancestors and p in ancestors[h] for h in head for p in tail]):    # yield if all beads in the head are ancestors of all beads
                     break
 
 
