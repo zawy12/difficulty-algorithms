@@ -133,7 +133,7 @@ for h in range(blocks):
 
 # initialize arrays
 def initialize_global_arrays(DAA_, Nb_):
-    global Nc_blocks, Nb_Nc, time, x, d, num_parents, solvetime, Nb, DAA, parents
+    global Nc_blocks, Nb_Nc, time, x, d, num_parents, solvetime, Nb, DAA, parents, children
     Nc_blocks = np.zeros(blocks, dtype=bool)   # index is height. True = a consensus block. 
     Nb_Nc     = np.zeros(blocks, dtype=float)  # The ratio Nb/Nc as observed by the block at height h looking back Nb
     time      = np.zeros(blocks, dtype=float)  # Simulator has access to precise time for ordering to make things easy. 
@@ -146,6 +146,7 @@ def initialize_global_arrays(DAA_, Nb_):
 
     # parents[of h][are these h's]  This sublist will have varying # of elements.
     parents = [[] for _ in range(blocks)]
+    children= [frozenset() for _ in range(blocks)]
        
 def print_table(data):   
     col_widths = [max(len(str(row[i])) for row in data) for i in range(len(data[0]))]
@@ -183,7 +184,7 @@ def do_mining():
     had_a_sibling   = np.zeros(blocks, dtype=bool) # if it had a sibling within latency before or after, it's not an Nc.
     
 # Genesis block
-    x[0] = initial_target ; Nb_Nc[0] = Nb_Nc_desired ; num_parents[0] = 0 ; parents[0].append(0)
+    x[0] = initial_target ; Nb_Nc[0] = Nb_Nc_desired ; num_parents[0] = 0
     solvetime[0] = solvetime_all[0]/base_hashrate/x[0]
     time[0] = solvetime[0]
     d[0]=1/x[0]
@@ -344,7 +345,7 @@ def single_plots():
     plt.ylabel('difficulty, hashrate, parents, 1/10th Nc_time')
     plt.legend()
     manager = plt.get_current_fig_manager()
-    manager.resize(*manager.window.maxsize())
+    #manager.resize(*manager.window.maxsize())
     plt.show()
 
 def do_all(DAA_,Nb_):
@@ -353,10 +354,66 @@ def do_all(DAA_,Nb_):
     global start, finish_time
     start = timer.time()
     do_mining()
+    # Reverse the parents array: compute children
+    for b in range(blocks):
+        for p in parents[b]:
+            children[p] = children[p].union([b])
     finish_time = timer.time() - start
     print_finish_message()
     if show_single_plots: single_plots()
     return x, d, SD_x, SD_d, mean_d, num_parents, SD_parents
+
+def next_generation(bs, older=False):
+    """ Returns the set of beads one generation from {bs} in the <older>
+        direction using either the parents or children arrays.
+    """
+    generation = parents if older else children
+    if isinstance(bs, int) or isinstance(bs, np.int32): bs = frozenset([bs])
+    return frozenset({g for b in bs for g in generation[b]})
+
+def cohorts(initial_cohort=None, older=False):
+    """ Given the seed of the next cohort (which is the set of beads one step older, in the next
+        cohort), build an ancestor and descendant set for each visited bead.  A new cohort is
+        formed if we encounter a set of beads, stepping in the descendant direction, for which
+        *all* beads in this cohort are ancestors of the first generation of beads in the next
+        cohort.
+
+        This function will not return the tips nor any beads connected to them, that do not yet
+        form a cohort, (nor the genesis bead when traversing older=True).
+
+        cohort: frozenset of beads
+        head: frozenset of beads on the boundary with the last cohort
+        gen: frozenset of beads in the generation under consideration
+        parents: dictionary of {bead: frozenset} for the parents of each bead examined
+        ancestors: dictionary of {bead: frozenset} for the ancestors of each bead examined
+    """
+    if isinstance(initial_cohort, int) or isinstance(initial_cohort, np.int32):
+        cohort = frozenset([initial_cohort])
+    else:
+        cohort = initial_cohort or frozenset([0])
+    head   = nexthead = next_generation(cohort, older)
+    while True :
+        yield cohort
+        gen         = head      = nexthead
+        cparents    = ancestors = {h: next_generation(h, not older) - cohort for h in head}
+        while True:                                                                            # DFS search
+            gen = next_generation(gen, older)
+            if not gen: return                                                                 # Ends the iteration (StopIteration) at a tip
+            for g in gen: cparents[g] = next_generation(g, not older)                          # Collect parents of every bead in this generation
+            while True:                                                                        # BFS Update ancestors: parents plus its parents' parents
+                oldancestors = {g: ancestors[g] for g in gen}                                  # loop because ancestors may have new ancestors
+                for g in gen:
+                    if all([p in ancestors for p in cparents[g]]):                             # If we have ancestors for all parents of g,
+                        ancestors[g] = cparents[g].union(*[ancestors[p] for p in cparents[g]]) # update the ancestors with other ancestors of g's parents
+                if oldancestors == {g: ancestors[g] for g in gen}: break                       # Break if ancestors haven't changed
+            if(all([p in ancestors] for p in frozenset.union(*[cparents[g] for g in gen]))     # we have no missing ancestors
+                and all([h in ancestors[g] for h in head for g in gen])):                      # and everyone has all head beads as ancestors
+                cohort = frozenset.intersection(*[ancestors[g] for g in gen])                  # We found a new cohort
+                nexthead = next_generation(cohort, older) - cohort                             # the youngest beads outside the candidate cohort
+                tail = next_generation(nexthead, not older)                                    # the oldest beads in the candidate cohort
+                if all([h in ancestors and p in ancestors[h] for h in nexthead for p in tail]):# yield if all beads in the head are ancestors of all beads
+                    break
+
 
 # This mess is needed for the combined plot
 if DAA_0: (x_0, d_0, SD_x_0, SD_d_0, mean_d_0, num_parents_0, SD_parents_0) = do_all(0,Nb_0)
