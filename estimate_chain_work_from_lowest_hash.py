@@ -29,11 +29,11 @@ for j in range(trials):
         if i > blocks/2: # checking to see if hashrate hcnaging has an effect. 
             difficulty_target *= 0.1
             hashrate = max_target/difficulty_target / blocktime 
-        winning_hash_value = random.random() * difficulty_target / max_target
+        winning_hash_value = random.random() * difficulty_target
         lowest_hash = min(lowest_hash, winning_hash_value)
         solvetime = -math.log(random.random()) / difficulty_target / hashrate * max_target 
         hashes += solvetime * hashrate  # W in the article
-    implied_hashes = 1 / lowest_hash # D in the article
+    implied_hashes = max_target / lowest_hash # D in the article
     avg_hashes += hashes / trials
     avg_implied_hashes += implied_hashes / trials
     hash_ratios.append(hashes / implied_hashes)
