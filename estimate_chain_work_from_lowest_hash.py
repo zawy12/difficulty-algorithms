@@ -8,7 +8,7 @@ import statistics  # Added for median calculation
 #
 # Difficulty = hashrate = 1 therefore difficulty / hashrate = blocktime = 1
 
-trials = int(1000)  
+trials = int(10000)
 blocks = int(1000)
 avg_hashes = 0
 avg_implied_hashes = 0
@@ -19,23 +19,23 @@ max_target = pow(2,256)
 blocktime = 600
 for j in range(trials):
     solvetime = 0
-    lowest_hash = 1
+    lowest_hash = pow(2,256)
     hashes= 0
     implied_hashes = 0    
     factor = 1 
     for i in range(blocks):
         difficulty_target = max_target / 1000
         hashrate = max_target / difficulty_target / blocktime
-        if i > blocks/2: # checking to see if hashrate hcnaging has an effect. 
+        if i > blocks/2: # checking to see if hashrate chnaging has an effect. 
             difficulty_target *= 0.1
             hashrate = max_target/difficulty_target / blocktime 
-        winning_hash_value = random.random() * difficulty_target
+        winning_hash_value = random.random() * difficulty_target # it's somewhere from 0 to target.
         lowest_hash = min(lowest_hash, winning_hash_value)
         solvetime = -math.log(random.random()) / difficulty_target / hashrate * max_target 
-        hashes += solvetime * hashrate  # W in the article
-    implied_hashes = max_target / lowest_hash # D in the article
-    avg_hashes += hashes / trials
+        hashes += solvetime * hashrate   # W  in the article. Divided by max_target to get Grok's equation
+    implied_hashes = max_target / lowest_hash # this is D in the article. Change max_target to 1 to get Grok's eq.
     avg_implied_hashes += implied_hashes / trials
+    avg_hashes += hashes / trials 
     hash_ratios.append(hashes / implied_hashes)
 
 # Histogram plotting
@@ -60,8 +60,8 @@ for bin_start in range(int(min_ratio / bin_width), int(max_ratio / bin_width) + 
     print(f"{bin_value:.2f} | {'x' * bar_length} {freq}")
 
 # Print results
-print(f"chain_work/estimate using estimate = 2^256/2/lowest_hash): {avg_implied_hashes / 2 / avg_hashes}")
 print(f"chain_work/estimate using estimate = 2^256/6/lowest_hash): {avg_implied_hashes / 6 / avg_hashes}")
+print(f"Finite sample bias correction: 2^256/lowest_hash/(ln(trials) +0.577): {avg_implied_hashes/avg_hashes/(math.log(trials) + 0.577)}")
 print("Mean W/D: " + str(statistics.mean(hash_ratios)))  # should be 1.0 for exponential distribution
 print("StdDev W/D: " + str(statistics.stdev(hash_ratios)))   # should be 1.0 for exponential distribution
 print("Median W/D: " + str(statistics.median(hash_ratios))) # should be ln(2) = 0.693 for exponential distribution
