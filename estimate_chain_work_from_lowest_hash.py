@@ -5,12 +5,18 @@ import statistics  # Added for median calculation
 # This simulates the lifetime of blocks on to investigate the relation between the lowest hash
 # seen and the total chain work.  See:
 # https://github.com/zawy12/difficulty-algorithms/issues/84
+#
+# Difficulty = hashrate = 1 therefore difficulty / hashrate = blocktime = 1
 
 trials = int(1000)  
 blocks = int(1000)
 avg_hashes = 0
 avg_implied_hashes = 0
 hash_ratios = []
+# The following 2 parameters were unnecessary, but make it complete.
+# To simplify this code, set these 2 equal to 1 which can remove all occurences below. 
+max_target = pow(2,256)
+blocktime = 600
 for j in range(trials):
     solvetime = 0
     lowest_hash = 1
@@ -18,11 +24,15 @@ for j in range(trials):
     implied_hashes = 0    
     factor = 1 
     for i in range(blocks):
-        if i > blocks/2: factor = 2 # adjustment for increasing hashrate
-        hash_value = random.random()  
-        lowest_hash = min(lowest_hash, hash_value/factor)
-        solvetime = -math.log(random.random())  # this assumes difficulty matches hashrate for consistent blocktimes
-        hashes += solvetime*factor   # W in the article
+        difficulty_target = max_target / 1000
+        hashrate = max_target / difficulty_target / blocktime
+        if i > blocks/2: # checking to see if hashrate hcnaging has an effect. 
+            difficulty_target *= 0.1
+            hashrate = max_target/difficulty_target / blocktime 
+        winning_hash_value = random.random() * difficulty_target / max_target
+        lowest_hash = min(lowest_hash, winning_hash_value)
+        solvetime = -math.log(random.random()) / difficulty_target / hashrate * max_target 
+        hashes += solvetime * hashrate  # W in the article
     implied_hashes = 1 / lowest_hash # D in the article
     avg_hashes += hashes / trials
     avg_implied_hashes += implied_hashes / trials
@@ -39,7 +49,7 @@ for ratio in hash_ratios:
 
 # Find max frequency for scaling
 max_freq = max(bins.values()) if bins else 1
-terminal_width = 50  # Adjust for terminal width
+terminal_width = 120  # Adjust for terminal width
 
 # Print histogram
 print("\nHistogram of hash_ratios (0.05 increments):")
