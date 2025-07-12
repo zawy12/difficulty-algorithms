@@ -8,7 +8,7 @@ import statistics  # Added for median calculation
 #
 # Difficulty = hashrate = 1 therefore difficulty / hashrate = blocktime = 1
 
-trials = int(10000)
+trials = int(1000)
 blocks = int(1000)
 avg_hashes = 0
 avg_implied_hashes = 0
@@ -32,8 +32,8 @@ for j in range(trials):
         winning_hash_value = random.random() * difficulty_target # it's somewhere from 0 to target.
         lowest_hash = min(lowest_hash, winning_hash_value)
         solvetime = -math.log(random.random()) / difficulty_target / hashrate * max_target 
-        hashes += solvetime * hashrate   # W  in the article. Divided by max_target to get Grok's equation
-    implied_hashes = max_target / lowest_hash # this is D in the article. Change max_target to 1 to get Grok's eq.
+        hashes += solvetime * hashrate   #  Divided by max_target to match the github article
+    implied_hashes = max_target / lowest_hash # Change max_target to 1 to match the article
     avg_implied_hashes += implied_hashes / trials
     avg_hashes += hashes / trials 
     hash_ratios.append(hashes / implied_hashes)
