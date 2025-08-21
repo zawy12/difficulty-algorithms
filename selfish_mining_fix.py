@@ -29,10 +29,7 @@ alpha = 0.40 # selfish mining hashrate proportion
 # the selfish miner's block timestamps do not violate the rule
 gamma = 0.5
 
-enforce_fraction = 1.0  # fraction of honest miners that is enforcing
-enforce_fraction = alpha
-enforce_hashrate = 0.5 
-enforce_fraction = enforce_hashrate / (1-alpha)
+enforce_fraction = 1.0
 
 # the following parameters shouldn't need changing as much the the above
 
@@ -74,6 +71,55 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
     released_time = 0.0
     is_trailing = False
 
+    def handle_attacker_timeout(honest_height, private_height, num_selfish_private, reject_until, current_t, is_lead_stubborn=False):
+        nonlocal t, attacker_reorg_sizes, honest_reorg_sizes
+        h = 1 - alpha
+        enf_hash = h * enforce_fraction
+        non_enf_hash = h * (1 - enforce_fraction)
+        while current_t < reject_until:
+            dt_enforce = random.expovariate(enf_hash / BLOCK_TIME) if enf_hash > 0 else math.inf
+            dt_non = random.expovariate(non_enf_hash / BLOCK_TIME) if non_enf_hash > 0 else math.inf
+            dt_self = random.expovariate(alpha / BLOCK_TIME) if alpha > 0 else math.inf
+            dt = min(dt_enforce, dt_non, dt_self)
+            if current_t + dt >= reject_until:
+                break
+            current_t += dt
+            if dt == dt_enforce:
+                honest_height +=1
+            else:
+                private_height +=1
+                if dt == dt_self:
+                    num_selfish_private +=1
+        if private_height > honest_height:
+            attacker_reorg_sizes[honest_height] += 1
+            added_self = num_selfish_private
+            added_length = private_height
+            private_won = True
+        elif private_height < honest_height:
+            honest_reorg_sizes[num_selfish_private] += 1
+            added_self = 0
+            added_length = honest_height
+            private_won = False
+        else:
+            effective_gamma = gamma * (1 - enforce_fraction)
+            dt = random.expovariate(1 / BLOCK_TIME)
+            t += dt
+            r = random.random()
+            if r <= alpha:
+                added_self = num_selfish_private + 1
+            elif r <= alpha + (1 - alpha) * effective_gamma:
+                added_self = num_selfish_private
+            else:
+                added_self = 0
+            added_length = private_height + 1
+            if r <= alpha + (1 - alpha) * effective_gamma:
+                attacker_reorg_sizes[honest_height] += 1
+                private_won = True
+            else:
+                honest_reorg_sizes[num_selfish_private] += 1
+                private_won = False
+        return added_self, added_length, private_won
+
     while t < sim_time:
         if is_trailing:
             dt = random.expovariate(1 / BLOCK_TIME)
@@ -88,6 +134,7 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                     bad = False
                     arrival_t = t + random.expovariate(1 / PROP_DELAY)
                     local_t = arrival_t + random.uniform(-CLOCK_ERROR_MAX, +CLOCK_ERROR_MAX)
+                    ts = None
                     if with_rule:
                         for mt in private_mining_times:
                             ts = mt + FUTURE_DELTA_SELFISH
@@ -95,60 +142,24 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                                 bad = True
                                 break
                     if bad:
-                        reject_until = max(arrival_t + TIMEOUT, private_mining_times[-1] + FUTURE_DELTA_SELFISH - FUTURE_LIMIT)
+                        reject_until = max(arrival_t + TIMEOUT, ts - FUTURE_LIMIT)
                         honest_height = honest_branch_size
                         private_height = len(private_mining_times)
                         num_selfish_private = len(private_mining_times)
                         current_t = arrival_t
-                        h = 1 - alpha
-                        beta = enforce_fraction
-                        enf_hash = beta * h
-                        non_enf_hash = (1 - beta) * h
-                        while current_t < reject_until:
-                            dt_enforce = random.expovariate(enf_hash / BLOCK_TIME) if enf_hash > 0 else math.inf
-                            dt_non = random.expovariate(non_enf_hash / BLOCK_TIME) if non_enf_hash > 0 else math.inf
-                            dt_self = random.expovariate(alpha / BLOCK_TIME) if alpha > 0 else math.inf
-                            dt = min(dt_enforce, dt_non, dt_self)
-                            if current_t + dt >= reject_until:
-                                break
-                            current_t += dt
-                            if dt == dt_enforce:
-                                honest_height +=1
-                            elif dt == dt_non:
-                                private_height +=1
-                            else:
-                                private_height +=1
-                                num_selfish_private +=1
-                        if private_height > honest_height:
-                            num_selfish_blocks += num_selfish_private
-                            longest_chain_length += private_height
-                            attacker_reorg_sizes[honest_height] += 1
-                        elif private_height < honest_height:
-                            longest_chain_length += honest_height
-                            honest_reorg_sizes[private_height] += 1
-                        else:
-                            effective_gamma = gamma * (1 - enforce_fraction)
-                            dt = random.expovariate(1 / BLOCK_TIME)
-                            t += dt
-                            r = random.random()
-                            if r <= alpha:
-                                num_selfish_blocks += num_selfish_private + 1
-                            elif r <= alpha + (1 - alpha) * effective_gamma:
-                                num_selfish_blocks += num_selfish_private
-                            else:
-                                num_selfish_blocks += 0
-                            longest_chain_length += private_height + 1
-                            if r <= alpha + (1 - alpha) * effective_gamma:
-                                attacker_reorg_sizes[honest_height] += 1
-                            else:
-                                honest_reorg_sizes[private_height] += 1
+                        added_self, added_length, private_won = handle_attacker_timeout(honest_height, private_height, num_selfish_private, reject_until, current_t)
+                        num_selfish_blocks += added_self
+                        longest_chain_length += added_length
+                        private_lead = 0
+                        private_mining_times = []
+                        is_trailing = False
                     else:
                         num_selfish_blocks += len(private_mining_times)
                         longest_chain_length += len(private_mining_times)
                         attacker_reorg_sizes[honest_branch_size] += 1
-                    private_lead = 0
-                    private_mining_times = []
-                    is_trailing = False
+                        private_lead = 0
+                        private_mining_times = []
+                        is_trailing = False
             else:
                 private_lead -=1
                 honest_branch_size +=1
@@ -264,6 +275,7 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                 arrival_t = mined_t + random.expovariate(1/PROP_DELAY)  # Release arrival
                 local_t = arrival_t + random.uniform(-CLOCK_ERROR_MAX, +CLOCK_ERROR_MAX)
                 bad = False
+                ts = None
                 if with_rule:
                     for mt in private_mining_times:
                         ts = mt + FUTURE_DELTA_SELFISH
@@ -271,60 +283,21 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                             bad = True
                             break
                 if bad:
-                    reject_until = max(arrival_t + TIMEOUT, private_mining_times[-1] + FUTURE_DELTA_SELFISH - FUTURE_LIMIT)
+                    reject_until = max(arrival_t + TIMEOUT, ts - FUTURE_LIMIT)
                     honest_height = 1  # Honest starts from the find
                     private_height = private_lead
                     num_selfish_private = private_lead
                     current_t = arrival_t
-                    h = 1 - alpha
-                    beta = enforce_fraction
-                    enf_hash = beta * h
-                    non_enf_hash = (1 - beta) * h
-                    while current_t < reject_until:
-                        dt_enforce = random.expovariate(enf_hash / BLOCK_TIME) if enf_hash > 0 else math.inf
-                        dt_non = random.expovariate(non_enf_hash / BLOCK_TIME) if non_enf_hash > 0 else math.inf
-                        dt_self = random.expovariate(alpha / BLOCK_TIME) if alpha > 0 else math.inf
-                        dt = min(dt_enforce, dt_non, dt_self)
-                        if current_t + dt >= reject_until:
-                            break
-                        current_t += dt
-                        if dt == dt_enforce:
-                            honest_height +=1
-                        elif dt == dt_non:
-                            private_height +=1
-                        else:
-                            private_height +=1
-                            num_selfish_private +=1
-                    if private_height > honest_height:
-                        num_selfish_blocks += num_selfish_private
-                        longest_chain_length += private_height
-                        attacker_reorg_sizes[honest_height] += 1
-                    elif private_height < honest_height:
-                        longest_chain_length += honest_height
-                        honest_reorg_sizes[private_height] += 1
-                    else:
-                        effective_gamma = gamma * (1 - enforce_fraction)
-                        dt = random.expovariate(1 / BLOCK_TIME)
-                        t += dt
-                        r = random.random()
-                        if r <= alpha:
-                            num_selfish_blocks += num_selfish_private + 1
-                        elif r <= alpha + (1 - alpha) * effective_gamma:
-                            num_selfish_blocks += num_selfish_private
-                        else:
-                            num_selfish_blocks += 0
-                        longest_chain_length += private_height + 1
-                        if r <= alpha + (1 - alpha) * effective_gamma:
-                            attacker_reorg_sizes[honest_height] += 1
-                        else:
-                            honest_reorg_sizes[private_height] += 1
+                    added_self, added_length, private_won = handle_attacker_timeout(honest_height, private_height, num_selfish_private, reject_until, current_t)
+                    num_selfish_blocks += added_self
+                    longest_chain_length += added_length
                     private_lead = 0
                     private_mining_times = []
                 else:
                     if private_lead == 1:
                         bad = False
+                        ts = private_mining_times[0] + FUTURE_DELTA_SELFISH
                         if with_rule:
-                            ts = private_mining_times[0] + FUTURE_DELTA_SELFISH
                             if ts > local_t + FUTURE_LIMIT or ts < local_t - PAST_LIMIT:
                                 bad = True
                         if bad:
@@ -333,54 +306,11 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                             private_height = 1
                             num_selfish_private = 1
                             current_t = arrival_t
-                            h = 1 - alpha
-                            beta = enforce_fraction
-                            enf_hash = beta * h
-                            non_enf_hash = (1 - beta) * h
-                            while current_t < reject_until:
-                                dt_enforce = random.expovariate(enf_hash / BLOCK_TIME) if enf_hash > 0 else math.inf
-                                dt_non = random.expovariate(non_enf_hash / BLOCK_TIME) if non_enf_hash > 0 else math.inf
-                                dt_self = random.expovariate(alpha / BLOCK_TIME) if alpha > 0 else math.inf
-                                dt = min(dt_enforce, dt_non, dt_self)
-                                if current_t + dt >= reject_until:
-                                    break
-                                current_t += dt
-                                if dt == dt_enforce:
-                                    honest_height +=1
-                                elif dt == dt_non:
-                                    private_height +=1
-                                else:
-                                    private_height +=1
-                                    num_selfish_private +=1
-                            if private_height > honest_height:
-                                num_selfish_blocks += num_selfish_private
-                                longest_chain_length += private_height
-                                attacker_reorg_sizes[honest_height] += 1
-                                private_lead = 0
-                                private_mining_times = []
-                            elif private_height < honest_height:
-                                longest_chain_length += honest_height
-                                honest_reorg_sizes[private_height] += 1
-                                private_lead = 0
-                                private_mining_times = []
-                            else:
-                                effective_gamma = gamma * (1 - enforce_fraction)
-                                dt = random.expovariate(1 / BLOCK_TIME)
-                                t += dt
-                                r = random.random()
-                                if r <= alpha:
-                                    num_selfish_blocks += num_selfish_private + 1
-                                elif r <= alpha + (1 - alpha) * effective_gamma:
-                                    num_selfish_blocks += num_selfish_private
-                                else:
-                                    num_selfish_blocks += 0
-                                longest_chain_length += private_height + 1
-                                if r <= alpha + (1 - alpha) * effective_gamma:
-                                    attacker_reorg_sizes[honest_height] += 1
-                                else:
-                                    honest_reorg_sizes[private_height] += 1
-                                private_lead = 0
-                                private_mining_times = []
+                            added_self, added_length, private_won = handle_attacker_timeout(honest_height, private_height, num_selfish_private, reject_until, current_t)
+                            num_selfish_blocks += added_self
+                            longest_chain_length += added_length
+                            private_lead = 0
+                            private_mining_times = []
                         else:
                             released_time = private_mining_times[0]
                             state = -1
@@ -389,8 +319,8 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                     else:
                         if lead_stubborn:
                             bad = False
+                            ts = private_mining_times[0] + FUTURE_DELTA_SELFISH
                             if with_rule:
-                                ts = private_mining_times[0] + FUTURE_DELTA_SELFISH
                                 if ts > local_t + FUTURE_LIMIT or ts < local_t - PAST_LIMIT:
                                     bad = True
                             if bad:
@@ -399,54 +329,16 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                                 private_height = 1
                                 num_selfish_private = 1
                                 current_t = arrival_t
-                                h = 1 - alpha
-                                beta = enforce_fraction
-                                enf_hash = beta * h
-                                non_enf_hash = (1 - beta) * h
-                                while current_t < reject_until:
-                                    dt_enforce = random.expovariate(enf_hash / BLOCK_TIME) if enf_hash > 0 else math.inf
-                                    dt_non = random.expovariate(non_enf_hash / BLOCK_TIME) if non_enf_hash > 0 else math.inf
-                                    dt_self = random.expovariate(alpha / BLOCK_TIME) if alpha > 0 else math.inf
-                                    dt = min(dt_enforce, dt_non, dt_self)
-                                    if current_t + dt >= reject_until:
-                                        break
-                                    current_t += dt
-                                    if dt == dt_enforce:
-                                        honest_height +=1
-                                    elif dt == dt_non:
-                                        private_height +=1
-                                    else:
-                                        private_height +=1
-                                        num_selfish_private +=1
-                                if private_height > honest_height:
-                                    num_selfish_blocks += num_selfish_private
-                                    longest_chain_length += private_height
-                                    attacker_reorg_sizes[honest_height] += 1
-                                    private_lead -= 1
+                                added_self, added_length, private_won = handle_attacker_timeout(honest_height, private_height, num_selfish_private, reject_until, current_t, is_lead_stubborn=True)
+                                num_selfish_blocks += added_self
+                                longest_chain_length += added_length
+                                if private_won:
+                                    private_lead -=1
                                     private_mining_times = private_mining_times[1:]
-                                elif private_height < honest_height:
-                                    longest_chain_length += honest_height
-                                    honest_reorg_sizes[private_height] += 1
+                                    state = -1
+                                else:
                                     private_lead = 0
                                     private_mining_times = []
-                                else:
-                                    effective_gamma = gamma * (1 - enforce_fraction)
-                                    dt = random.expovariate(1 / BLOCK_TIME)
-                                    t += dt
-                                    r = random.random()
-                                    if r <= alpha:
-                                        num_selfish_blocks += num_selfish_private + 1
-                                    elif r <= alpha + (1 - alpha) * effective_gamma:
-                                        num_selfish_blocks += num_selfish_private
-                                    else:
-                                        num_selfish_blocks += 0
-                                    longest_chain_length += private_height + 1
-                                    if r <= alpha + (1 - alpha) * effective_gamma:
-                                        attacker_reorg_sizes[honest_height] += 1
-                                    else:
-                                        honest_reorg_sizes[private_height] += 1
-                                    private_lead -= 1
-                                    private_mining_times = private_mining_times[1:]
                             else:
                                 released_time = private_mining_times[0]
                                 private_mining_times = private_mining_times[1:]
@@ -480,8 +372,12 @@ avg_without = without_sum / num_runs
 avg_with = with_sum / num_runs
 gain_without = (avg_without - alpha) / alpha * 100
 gain_with = (avg_with - alpha) / alpha * 100
-print("Without rule: {:.2f}% {}".format(abs(gain_without), "gain" if gain_without > 0 else "loss"))
-print("With rule: {:.2f}% {}".format(abs(gain_with), "gain" if gain_with > 0 else "loss"))
+honest_gain_without = (alpha - avg_without) / (1 - alpha) * 100
+honest_gain_with = (alpha - avg_with) / (1 - alpha) * 100
+print("Attacker without rule: {:.2f}% {}".format(abs(gain_without), "gain" if gain_without > 0 else "loss"))
+print("Attacker with rule: {:.2f}% {}".format(abs(gain_with), "gain" if gain_with > 0 else "loss"))
+print("Honest without rule: {:.2f}% {}".format(abs(honest_gain_without), "gain" if honest_gain_without > 0 else "loss"))
+print("Honest with rule: {:.2f}% {}".format(abs(honest_gain_with), "gain" if honest_gain_with > 0 else "loss"))
 print("Total attacker blocks orphaned  without rule:")
 for size in sorted(without_honest_sizes):
     print("Size {}: {}".format(size, without_honest_sizes[size]))
