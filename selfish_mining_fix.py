@@ -21,7 +21,7 @@ CLOCK_ERROR_MAX = 20.0  # honest miner clocks must have errors less than +/- thi
 TIMEOUT = 2 * BLOCK_TIME # timeout period if a block violates the rule. Try 0.693 to 5.
 PROP_DELAY = 0.5 # mean network propagation delay with exponential distribution as experiments show. 0.5 in bitcoin.
 
-strategy = 'classic'  # 'classic', 'trail-stubborn', 'lead-stubborn', 'equal-fork-stubborn'
+strategy = 'lead-stubborn'  # 'classic', 'trail-stubborn', 'lead-stubborn', 'equal-fork-stubborn'
 
 alpha = 0.40 # selfish mining hashrate proportion
 
@@ -29,7 +29,7 @@ alpha = 0.40 # selfish mining hashrate proportion
 # the selfish miner's block timestamps do not violate the rule
 gamma = 0.5
 
-enforce_fraction = 1.0
+enforce_fraction = 1.0  # fraction of honest miners that enforce the rule
 
 # the following parameters shouldn't need changing as much the the above
 
@@ -43,7 +43,7 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
         lead_stubborn = False
         equal_fork_stubborn = False
     elif strategy == 'trail-stubborn':
-        trail_stubborn = math.inf
+        trail_stubborn = 1
         lead_stubborn = False
         equal_fork_stubborn = False
     elif strategy == 'lead-stubborn':
@@ -91,12 +91,14 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                 if dt == dt_self:
                     num_selfish_private +=1
         if private_height > honest_height:
-            attacker_reorg_sizes[honest_height] += 1
+            if honest_height > 0:
+                attacker_reorg_sizes[honest_height] += 1
             added_self = num_selfish_private
             added_length = private_height
             private_won = True
         elif private_height < honest_height:
-            honest_reorg_sizes[num_selfish_private] += 1
+            if num_selfish_private > 0:
+                honest_reorg_sizes[num_selfish_private] += 1
             added_self = 0
             added_length = honest_height
             private_won = False
@@ -113,10 +115,12 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                 added_self = 0
             added_length = private_height + 1
             if r <= alpha + (1 - alpha) * effective_gamma:
-                attacker_reorg_sizes[honest_height] += 1
+                if honest_height > 0:
+                    attacker_reorg_sizes[honest_height] += 1
                 private_won = True
             else:
-                honest_reorg_sizes[num_selfish_private] += 1
+                if num_selfish_private > 0:
+                    honest_reorg_sizes[num_selfish_private] += 1
                 private_won = False
         return added_self, added_length, private_won
 
@@ -156,7 +160,8 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                     else:
                         num_selfish_blocks += len(private_mining_times)
                         longest_chain_length += len(private_mining_times)
-                        attacker_reorg_sizes[honest_branch_size] += 1
+                        if honest_branch_size > 0:
+                            attacker_reorg_sizes[honest_branch_size] += 1
                         private_lead = 0
                         private_mining_times = []
                         is_trailing = False
@@ -164,7 +169,8 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                 private_lead -=1
                 honest_branch_size +=1
                 if -private_lead > trail_stubborn:
-                    honest_reorg_sizes[len(private_mining_times)] += 1
+                    if len(private_mining_times) > 0:
+                        honest_reorg_sizes[len(private_mining_times)] += 1
                     longest_chain_length += honest_branch_size
                     private_lead = 0
                     private_mining_times = []
@@ -218,44 +224,55 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                 if bad:
                     # Rejection for honest block
                     reject_until = max(arrival_t + TIMEOUT,ts_honest-FUTURE_LIMIT) # it never occurs in this code but don't accept if its too fare in future
-                    honest_height = 1  # The rejected one starts a side
-                    other_height = 0   # No other chain
+                    side_height = 1  # The rejected one starts a side (non-enf)
+                    main_height = 0   # old chain (enf)
+                    num_selfish_main = 0
                     current_t = arrival_t
+                    h = 1 - alpha
+                    enf_hash = h * enforce_fraction
+                    non_enf_hash = h * (1 - enforce_fraction)
                     while current_t < reject_until:
-                        dt_h = random.expovariate((1 - alpha) / BLOCK_TIME)
-                        dt_s = random.expovariate(alpha / BLOCK_TIME)
-                        dt = min(dt_h, dt_s)
+                        dt_enf = random.expovariate(enf_hash / BLOCK_TIME) if enf_hash > 0 else math.inf
+                        dt_non = random.expovariate(non_enf_hash / BLOCK_TIME) if non_enf_hash > 0 else math.inf
+                        dt_self = random.expovariate(alpha / BLOCK_TIME) if alpha > 0 else math.inf
+                        dt = min(dt_enf, dt_non, dt_self)
                         if current_t + dt >= reject_until:
                             break
                         current_t += dt
-                        if dt == dt_h:
-                            honest_height +=1
+                        if dt == dt_enf:
+                            main_height +=1
+                        elif dt == dt_non:
+                            side_height +=1
                         else:
-                            # Selfish mines on main, assume
-                            other_height +=1
-                    if honest_height > other_height:
-                        longest_chain_length += honest_height
-                        honest_reorg_sizes[other_height] += 1
-                    elif honest_height < other_height:
-                        longest_chain_length += other_height
-                        num_selfish_blocks += other_height
-                        attacker_reorg_sizes[honest_height] += 1
+                            main_height +=1
+                            num_selfish_main +=1
+                    if side_height > main_height:
+                        longest_chain_length += side_height
+                        if main_height > 0:
+                            honest_reorg_sizes[main_height - num_selfish_main] += 1  # but mixed, but approximate
+                    elif side_height < main_height:
+                        longest_chain_length += main_height
+                        num_selfish_blocks += num_selfish_main
+                        if side_height > 0:
+                            attacker_reorg_sizes[side_height] += 1
                     else:
                         # tie, simulate race
                         dt = random.expovariate(1 / BLOCK_TIME)
                         t += dt
                         r = random.random()
                         if r <= alpha:
-                            num_selfish_blocks += other_height + 1
-                        elif r <= alpha + (1 - alpha) * gamma:
-                            num_selfish_blocks += other_height
+                            num_selfish_blocks += num_selfish_main + 1
+                        elif r <= alpha + (1 - alpha) * enforce_fraction:  # enf on main
+                            num_selfish_blocks += num_selfish_main
                         else:
                             num_selfish_blocks += 0
-                        longest_chain_length += other_height + 1
-                        if r <= alpha + (1 - alpha) * gamma:
-                            attacker_reorg_sizes[honest_height] += 1
+                        longest_chain_length += main_height + 1
+                        if r <= alpha + (1 - alpha) * enforce_fraction:
+                            if side_height > 0:
+                                attacker_reorg_sizes[side_height] += 1
                         else:
-                            honest_reorg_sizes[other_height] += 1
+                            if main_height - num_selfish_main > 0:
+                                honest_reorg_sizes[main_height - num_selfish_main] += 1
                 else:
                     if trail_stubborn > 0:
                         private_lead = -1
@@ -329,7 +346,7 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                                 private_height = 1
                                 num_selfish_private = 1
                                 current_t = arrival_t
-                                added_self, added_length, private_won = handle_attacker_timeout(honest_height, private_height, num_selfish_private, reject_until, current_t, is_lead_stubborn=True)
+                                added_self, added_length, private_won = handle_attacker_timeout(honest_height, private_height, num_selfish_private, reject_until, current_t)
                                 num_selfish_blocks += added_self
                                 longest_chain_length += added_length
                                 if private_won:
@@ -347,9 +364,47 @@ def simulate(alpha, gamma, sim_time, with_rule=False, enforce_fraction=1.0):
                         else:
                             num_selfish_blocks += private_lead
                             longest_chain_length += private_lead
-                            attacker_reorg_sizes[1] += 1
+                            if 1 > 0:
+                                attacker_reorg_sizes[1] += 1
                             private_lead = 0
                             private_mining_times = []
+    # Resolve unfinished states
+    if private_lead > 0:
+        num_selfish_blocks += private_lead
+        longest_chain_length += private_lead
+    if state == -1:
+        r = random.random()
+        if r <= alpha:
+            num_selfish_blocks += 2
+            longest_chain_length += 2
+            attacker_reorg_sizes[1] += 1
+        elif r <= alpha + (1 - alpha) * gamma:
+            num_selfish_blocks += 1
+            longest_chain_length += 2
+            attacker_reorg_sizes[1] += 1
+        else:
+            longest_chain_length += 2
+            honest_reorg_sizes[1] += 1
+    if is_trailing:
+        while True:
+            r = random.random()
+            if r <= alpha:
+                private_mining_times.append(0)  # dummy
+                private_lead +=1
+                if private_lead > 0:
+                    num_selfish_blocks += len(private_mining_times)
+                    longest_chain_length += len(private_mining_times)
+                    if honest_branch_size > 0:
+                        attacker_reorg_sizes[honest_branch_size] += 1
+                    break
+            else:
+                private_lead -=1
+                honest_branch_size +=1
+                if -private_lead > trail_stubborn:
+                    if len(private_mining_times) > 0:
+                        honest_reorg_sizes[len(private_mining_times)] += 1
+                    longest_chain_length += honest_branch_size
+                    break
     ratio = num_selfish_blocks / longest_chain_length if longest_chain_length > 0 else 0.0
     return ratio, attacker_reorg_sizes, honest_reorg_sizes
 
@@ -374,6 +429,8 @@ gain_without = (avg_without - alpha) / alpha * 100
 gain_with = (avg_with - alpha) / alpha * 100
 honest_gain_without = (alpha - avg_without) / (1 - alpha) * 100
 honest_gain_with = (alpha - avg_with) / (1 - alpha) * 100
+
+print("Strategy: {}, alpha: {}, gamma: {}, enforce_fraction: {}".format(strategy, alpha, gamma, enforce_fraction))
 print("Attacker without rule: {:.2f}% {}".format(abs(gain_without), "gain" if gain_without > 0 else "loss"))
 print("Attacker with rule: {:.2f}% {}".format(abs(gain_with), "gain" if gain_with > 0 else "loss"))
 print("Honest without rule: {:.2f}% {}".format(abs(honest_gain_without), "gain" if honest_gain_without > 0 else "loss"))
